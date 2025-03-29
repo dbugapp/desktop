@@ -1,6 +1,7 @@
 mod server;
 mod gui;
 mod storage;
+mod settings;
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error>> {

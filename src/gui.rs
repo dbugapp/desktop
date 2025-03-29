@@ -1,4 +1,5 @@
-use iced::{Application, Command, Element, Column, Text};
+use iced::{Application, Command, Element};
+use iced::widget::{Column, Text};
 use crate::storage::Storage;
 use std::sync::{Arc, Mutex};
 
@@ -9,7 +10,7 @@ pub struct App {
 #[derive(Debug, Clone)]
 pub enum Message {}
 
-impl Application for App {
+impl iced::Application for App {
     type Executor = iced::executor::Default;
     type Message = Message;
     type Flags = ();

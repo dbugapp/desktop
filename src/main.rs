@@ -3,7 +3,7 @@ mod server;
 mod storage;
 mod highlighter;
 
-use iced::Sandbox;
+use iced::Application;
 
 fn main() -> iced::Result {
     // Initialize the server

@@ -1,4 +1,4 @@
-use iced::{Sandbox, Command, Element};
+use iced::{Element, executor, Application, Command};
 use iced::widget::{Column, Text};
 use iced::Element;
 use iced::widget::{Column, Text};
@@ -12,16 +12,14 @@ pub struct App {
 #[derive(Debug, Clone)]
 pub enum Message {}
 
-impl Sandbox for App {
+impl Application for App {
     type Message = Message;
     type Flags = ();
 
-    fn new() -> Self {
-        (
-            App {
-                storage: Arc::new(Mutex::new(Storage::new())),
-            },
-        )
+    fn new(_flags: ()) -> (Self, Command<Self::Message>) {
+        (App {
+            storage: Arc::new(Mutex::new(Storage::new())),
+        }, Command::none())
     }
 
     fn title(&self) -> String {

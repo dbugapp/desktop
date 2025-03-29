@@ -97,12 +97,22 @@ impl App {
                 ]
                 .height(Fill),
                 column(
-                    self.storage.get_all().iter().map(|(id, value)| {
-                        row![
-                            text(format!("ID: {}", id)),
-                            text(format!("Payload: {}", value))
-                        ]
-                        .spacing(10)
+                    self.storage.get_all().iter().map(|(_, value)| {
+                        container(
+                            row![
+                                text(format!("{}", value))
+                            ]
+                            .spacing(10)
+                        )
+                        .style(|_theme| {
+                            container::Style {
+                                border_radius: 5.0.into(),
+                                border_width: 1.0,
+                                border_color: Color::BLACK,
+                                ..container::Style::default()
+                            }
+                        })
+                        .padding(10)
                         .into()
                     }).collect::<Vec<_>>()
                 )

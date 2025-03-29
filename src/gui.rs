@@ -106,10 +106,10 @@ impl App {
                         )
                         .style(|_theme| {
                             container::Style {
-                                border: Some(container::Border {
+                                border: Some(iced::Border {
                                     color: Color::BLACK,
                                     width: 1.0,
-                                    radius: 5.0,
+                                    radius: 0.5,
                                 }),
                                 ..container::Style::default()
                             }

@@ -6,4 +6,4 @@
 * create a GUI using iced that lists the JSON objects as rows with the newest at the bottom
   * use the iced crate: https://crates.io/crates/iced
 * This list will be scrollable and always default to the bottom
-* Each block of JSON will have a border and be syntax highlighted
+* Each block of JSON will have a border

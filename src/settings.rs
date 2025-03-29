@@ -26,15 +26,19 @@ impl Settings {
         let path = Self::settings_path();
         
         if path.exists() {
-            let mut file = File::open(&path).unwrap_or_else(|_| {
-                panic!("Failed to open settings file")
-            });
+            let mut file = match File::open(&path) {
+                Ok(file) => file,
+                Err(err) => {
+                    eprintln!("Failed to open settings file: {}", err);
+                    return Self::default();
+                }
+            };
             
             let mut contents = String::new();
-            file.read_to_string(&mut contents).unwrap_or_else(|_| {
-                panic!("Failed to read settings file")
-            });
-            
+            if let Err(err) = file.read_to_string(&mut contents) {
+                eprintln!("Failed to read settings file: {}", err);
+                return Self::default();
+            }
             serde_json::from_str(&contents).unwrap_or_default()
         } else {
             Self::default()

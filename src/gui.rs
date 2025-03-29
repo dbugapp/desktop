@@ -3,7 +3,7 @@ use iced::keyboard;
 use iced::keyboard::key;
 use iced::widget::{
     self, button, center, column, container, horizontal_space, mouse_area,
-    opaque, row, stack, text,
+    opaque, row, stack, text, svg,
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 
@@ -85,15 +85,16 @@ impl App {
     }
 
     fn view(&self) -> Element<Message> {
+        let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
         let content = container(
             column![
-                row![text("Top Left"), horizontal_space(), text("Top Right")]
-                    .height(Fill),
-                center(button(text("Show Modal")).on_press(Message::ShowModal)),
                 row![
-                    text("Bottom Left"),
                     horizontal_space(),
-                    text("Bottom Right")
+                    button(svg(handle).width(20).height(20)).on_press(Message::ShowModal)
+                ]
+                .height(Fill),
+                row![
+                    horizontal_space()
                 ]
                 .align_y(Bottom)
                 .height(Fill),

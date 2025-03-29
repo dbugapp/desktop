@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-iced = "0.13.1"
+iced = {  version = "0.13.1", features = ["svg"] }
 sled = "0.34.7"
 warp = "0.3.7"
 tokio = {  version = "1.44.1", features = ["full"] }

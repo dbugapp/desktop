@@ -87,9 +87,11 @@ impl App {
     fn view(&self) -> Element<Message> {
         let content = container(
             column![
-                row![horizontal_space(), text("Top Right")]
-                    .height(Fill),
-                center(button(text("Show Modal")).on_press(Message::ShowModal)),
+                row![
+                    horizontal_space(),
+                    button(text("Show Modal")).on_press(Message::ShowModal)
+                ]
+                .height(Fill),
                 row![
                     horizontal_space()
                 ]

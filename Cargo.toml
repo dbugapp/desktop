@@ -8,3 +8,4 @@ iced = "0.13.1"
 mini-server = "0.2.0"
 syntect = "5.2.0"
 serde_json = "1.0"
+storage = "0.1"  # Assuming a storage crate exists

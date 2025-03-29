@@ -8,6 +8,7 @@ use iced::widget::{
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 
 use crate::settings::{Settings, Theme};
+use crate::storage::Storage;
 
 pub fn gui() -> iced::Result {
     iced::application("Modal - Iced", App::update, App::view)
@@ -18,6 +19,7 @@ pub fn gui() -> iced::Result {
 struct App {
     show_modal: bool,
     settings: Settings,
+    storage: Storage,
 }
 
 impl Default for App {
@@ -25,6 +27,7 @@ impl Default for App {
         Self {
             show_modal: false,
             settings: Settings::load(),
+            storage: Storage::new().expect("Failed to initialize storage"),
         }
     }
 }
@@ -93,6 +96,30 @@ impl App {
                     button(svg(handle).width(20).height(20)).on_press(Message::ShowModal)
                 ]
                 .height(Fill),
+                column(
+                    self.storage.get_all().iter().map(|(_, value)| {
+                        container(
+                            row![
+                                text(format!("{}", value))
+                            ]
+                            .spacing(10)
+                        )
+                        .style(|_theme| {
+                            container::Style {
+                                border: Some(iced::Border {
+                                    color: Color::BLACK,
+                                    width: 1.0,
+                                    radius: 0.5,
+                                }),
+                                ..container::Style::default()
+                            }
+                        })
+                        .padding(10)
+                        .into()
+                    }).collect::<Vec<_>>()
+                )
+                .spacing(10)
+                .padding(10),
                 row![
                     horizontal_space()
                 ]

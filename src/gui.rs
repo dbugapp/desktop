@@ -103,6 +103,7 @@ impl App {
                             text(format!("Payload: {}", value))
                         ]
                         .spacing(10)
+                        .into()
                     }).collect::<Vec<_>>()
                 )
                 .spacing(10)

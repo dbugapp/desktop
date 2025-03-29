@@ -1,12 +1,22 @@
 use warp::{hyper::Method, Filter};
+use crate::storage::Storage;
 
 pub async fn listen() {
 
+    let storage = Storage::new().expect("Failed to initialize storage");
+
     let payload = warp::post()
         .and(warp::body::json())
-        .map(|body: serde_json::Value| {
+        .map({
+            let storage = storage.clone();
+            move |body: serde_json::Value| {
             println!("Received payload: {}", body); // Log the received payload
+            // Store the payload
+            if let Err(e) = storage.add_json(body.clone()) {
+                eprintln!("Failed to store payload: {}", e);
+            }
             format!("hello {}!", body) // Return the formatted string
+            }
         });
 
     let cors = warp::cors()

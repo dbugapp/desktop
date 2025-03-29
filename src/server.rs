@@ -16,6 +16,7 @@ pub async fn listen() {
                 eprintln!("Failed to store payload: {}", e);
             }
             format!("hello {}!", body) // Return the formatted string
+            }
         });
 
     let cors = warp::cors()

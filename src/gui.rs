@@ -3,11 +3,11 @@ use iced::keyboard;
 use iced::keyboard::key;
 use iced::widget::{
     self, button, center, column, container, horizontal_space, mouse_area,
-    opaque, pick_list, row, stack, text, text_input,
+    opaque, row, stack, text,
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 
-use std::fmt;
+use crate::settings::{Settings, Theme};
 
 pub fn gui() -> iced::Result {
     iced::application("Modal - Iced", App::update, App::view)
@@ -15,22 +15,25 @@ pub fn gui() -> iced::Result {
         .run()
 }
 
-#[derive(Default)]
 struct App {
     show_modal: bool,
-    email: String,
-    password: String,
-    plan: Plan,
+    settings: Settings,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            show_modal: false,
+            settings: Settings::load(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 enum Message {
     ShowModal,
     HideModal,
-    Email(String),
-    Password(String),
-    Plan(Plan),
-    Submit,
+    ThemeSelected(Theme),
     Event(Event),
 }
 
@@ -43,29 +46,18 @@ impl App {
         match message {
             Message::ShowModal => {
                 self.show_modal = true;
-                widget::focus_next()
+                Task::none()
             }
             Message::HideModal => {
                 self.hide_modal();
                 Task::none()
             }
-            Message::Email(email) => {
-                self.email = email;
-                Task::none()
-            }
-            Message::Password(password) => {
-                self.password = password;
-                Task::none()
-            }
-            Message::Plan(plan) => {
-                self.plan = plan;
-                Task::none()
-            }
-            Message::Submit => {
-                if !self.email.is_empty() && !self.password.is_empty() {
-                    self.hide_modal();
+            Message::ThemeSelected(theme) => {
+                self.settings.theme = theme;
+                if let Err(e) = self.settings.save() {
+                    eprintln!("Failed to save settings: {}", e);
                 }
-
+                self.hide_modal();
                 Task::none()
             }
             Message::Event(event) => match event {
@@ -111,48 +103,23 @@ impl App {
             .padding(10);
 
         if self.show_modal {
-            let signup = container(
+            let theme_selection = container(
                 column![
-                    text("Sign Up").size(24),
-                    column![
-                        column![
-                            text("Email").size(12),
-                            text_input("abc@123.com", &self.email,)
-                                .on_input(Message::Email)
-                                .on_submit(Message::Submit)
-                                .padding(5),
-                        ]
-                        .spacing(5),
-                        column![
-                            text("Password").size(12),
-                            text_input("", &self.password)
-                                .on_input(Message::Password)
-                                .on_submit(Message::Submit)
-                                .secure(true)
-                                .padding(5),
-                        ]
-                        .spacing(5),
-                        column![
-                            text("Plan").size(12),
-                            pick_list(
-                                Plan::ALL,
-                                Some(self.plan),
-                                Message::Plan
-                            )
-                            .padding(5),
-                        ]
-                        .spacing(5),
-                        button(text("Submit")).on_press(Message::HideModal),
+                    text("Select Theme").size(24),
+                    row![
+                        button(text("Dark")).on_press(Message::ThemeSelected(Theme::Dark)),
+                        button(text("Light")).on_press(Message::ThemeSelected(Theme::Light)),
+                        button(text("System")).on_press(Message::ThemeSelected(Theme::System)),
                     ]
                     .spacing(10)
                 ]
-                    .spacing(20),
+                .spacing(20),
             )
                 .width(300)
                 .padding(10)
                 .style(container::rounded_box);
 
-            modal(content, signup, Message::HideModal)
+            modal(content, theme_selection, Message::HideModal)
         } else {
             content.into()
         }
@@ -162,32 +129,6 @@ impl App {
 impl App {
     fn hide_modal(&mut self) {
         self.show_modal = false;
-        self.email.clear();
-        self.password.clear();
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-enum Plan {
-    #[default]
-    Basic,
-    Pro,
-    Enterprise,
-}
-
-impl Plan {
-    pub const ALL: &'static [Self] =
-        &[Self::Basic, Self::Pro, Self::Enterprise];
-}
-
-impl fmt::Display for Plan {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Plan::Basic => "Basic",
-            Plan::Pro => "Pro",
-            Plan::Enterprise => "Enterprise",
-        }
-            .fmt(f)
     }
 }
 

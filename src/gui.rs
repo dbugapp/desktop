@@ -1,4 +1,5 @@
-use iced::{Sandbox, Command, Element};
+use iced::application::{Sandbox, Command};
+use iced::Element;
 use iced::widget::{Column, Text};
 use crate::storage::Storage;
 use std::sync::{Arc, Mutex};

@@ -1,4 +1,4 @@
-use iced::application::{Sandbox, Command};
+use iced::{Sandbox, Command};
 use iced::Element;
 use iced::widget::{Column, Text};
 use crate::storage::Storage;

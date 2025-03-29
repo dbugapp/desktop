@@ -1,6 +1,5 @@
 use warp::{hyper::Method, Filter};
 
-
 pub async fn listen() {
 
     let payload = warp::post()
@@ -20,6 +19,5 @@ pub async fn listen() {
 
     println!("Server started at http://127.0.0.1:53821");
 
-    // Use the correct run function
     warp::serve(routes).run(([127, 0, 0, 1], 53821)).await;
 }

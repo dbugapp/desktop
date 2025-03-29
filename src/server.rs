@@ -7,7 +7,9 @@ pub async fn listen() {
 
     let payload = warp::post()
         .and(warp::body::json())
-        .map(move |body: serde_json::Value| {
+        .map({
+            let storage = storage.clone();
+            move |body: serde_json::Value| {
             println!("Received payload: {}", body); // Log the received payload
             // Store the payload
             if let Err(e) = storage.add_json(body.clone()) {

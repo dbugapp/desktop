@@ -1,4 +1,4 @@
-use iced::{Application, Command, Element};
+use iced::{Sandbox, Command, Element};
 use iced::widget::{Column, Text};
 use crate::storage::Storage;
 use std::sync::{Arc, Mutex};
@@ -10,17 +10,15 @@ pub struct App {
 #[derive(Debug, Clone)]
 pub enum Message {}
 
-impl iced::Application for App {
-    type Executor = iced::executor::Default;
+impl Sandbox for App {
     type Message = Message;
     type Flags = ();
 
-    fn new(_flags: ()) -> (Self, Command<Self::Message>) {
+    fn new() -> Self {
         (
             App {
                 storage: Arc::new(Mutex::new(Storage::new())),
             },
-            Command::none(),
         )
     }
 

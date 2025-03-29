@@ -3,7 +3,7 @@ use iced::keyboard;
 use iced::keyboard::key;
 use iced::widget::{
     self, button, center, column, container, horizontal_space, mouse_area,
-    opaque, row, stack, text,
+    opaque, row, stack, text, svg
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 

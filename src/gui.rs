@@ -106,9 +106,11 @@ impl App {
                         )
                         .style(|_theme| {
                             container::Style {
-                                border_radius: 5.0.into(),
-                                border_width: 1.0,
-                                border_color: Color::BLACK,
+                                border: Some(container::Border {
+                                    color: Color::BLACK,
+                                    width: 1.0,
+                                    radius: 5.0,
+                                }),
                                 ..container::Style::default()
                             }
                         })

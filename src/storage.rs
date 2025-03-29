@@ -27,11 +27,8 @@ impl Storage {
             let mut file = File::open(&data_file)?;
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
-            
-            match serde_json::from_str::<Vec<(String, Value)>>(&contents) {
-                Ok(loaded_data) => loaded_data,
-                Err(_) => Vec::new(),
-            }
+
+            serde_json::from_str::<Vec<(String, Value)>>(&contents).unwrap_or_else(|_| Vec::new())
         } else {
             Vec::new()
         };

@@ -1,0 +1,31 @@
+.aider*
+# Target directory
+/target/
+
+# Build artifacts
+**/*.rs.bk
+
+# Rust package manager lock file (optional, keep if using exact versions)
+Cargo.lock
+
+# Debug and release builds
+/debug/
+/release/
+
+# IDE/editor files
+.idea/
+.vscode/
+*.iml
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Binaries
+*.exe
+*.dll
+*.dylib
+*.so

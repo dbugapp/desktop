@@ -3,6 +3,7 @@ use std::fs::{self, File};
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 
+/// Enum representing the available themes
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Theme {
     Dark,
@@ -16,12 +17,14 @@ impl Default for Theme {
     }
 }
 
+/// Struct to manage application settings
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Settings {
     pub theme: Theme,
 }
 
 impl Settings {
+    /// Loads settings from the settings file
     pub fn load() -> Self {
         let path = Self::settings_path();
         
@@ -45,6 +48,7 @@ impl Settings {
         }
     }
     
+    /// Saves the current settings to a file
     pub fn save(&self) -> io::Result<()> {
         let path = Self::settings_path();
         
@@ -60,6 +64,7 @@ impl Settings {
         Ok(())
     }
     
+    /// Returns the path to the settings file
     fn settings_path() -> PathBuf {
         let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
         path.push(".dbug_desktop");

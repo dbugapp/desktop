@@ -10,12 +10,14 @@ use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 use crate::settings::{Settings, Theme};
 use crate::storage::Storage;
 
+/// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
     iced::application("Modal - Iced", App::update, App::view)
         .subscription(App::subscription)
         .run()
 }
 
+/// Application state and logic
 struct App {
     show_modal: bool,
     settings: Settings,
@@ -32,6 +34,7 @@ impl Default for App {
     }
 }
 
+/// Messages used for application state updates
 #[derive(Debug, Clone)]
 enum Message {
     ShowModal,
@@ -41,10 +44,12 @@ enum Message {
 }
 
 impl App {
+    /// Subscribes to application events
     fn subscription(&self) -> Subscription<Message> {
         event::listen().map(Message::Event)
     }
 
+    /// Updates application state based on messages
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::ShowModal => {
@@ -87,6 +92,7 @@ impl App {
         }
     }
 
+    /// Renders the application view
     fn view(&self) -> Element<Message> {
         let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
         let content = container(
@@ -146,11 +152,13 @@ impl App {
 }
 
 impl App {
+    /// Hides the modal dialog
     fn hide_modal(&mut self) {
         self.show_modal = false;
     }
 }
 
+/// Creates a modal dialog overlay
 fn modal<'a, Message>(
     base: impl Into<Element<'a, Message>>,
     content: impl Into<Element<'a, Message>>,

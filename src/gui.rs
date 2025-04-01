@@ -6,14 +6,15 @@ use iced::widget::{
     opaque, row, stack, text, svg,
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
+use tokio::sync::mpsc;
 
 use crate::settings::{Settings, Theme};
 use crate::storage::Storage;
 
 /// Initializes and runs the GUI application
-pub fn gui() -> iced::Result {
+pub fn gui(rx: mpsc::Receiver<serde_json::Value>) -> iced::Result {
     iced::application("Modal - Iced", App::update, App::view)
-        .subscription(App::subscription)
+        .subscription(App::subscription(rx))
         .run()
 }
 
@@ -41,12 +42,13 @@ enum Message {
     HideModal,
     ThemeSelected(Theme),
     Event(Event),
+    NewPayload(serde_json::Value),
 }
 
 impl App {
     /// Subscribes to application events
-    fn subscription(&self) -> Subscription<Message> {
-        event::listen().map(Message::Event)
+    fn subscription(rx: mpsc::Receiver<serde_json::Value>) -> Subscription<Message> {
+        Subscription::from_recipe(PayloadListener { rx })
     }
 
     /// Updates application state based on messages
@@ -89,6 +91,11 @@ impl App {
                 }
                 _ => Task::none(),
             },
+            Message::NewPayload(payload) => {
+                // Refresh the display with the new payload
+                self.storage.add_json(payload).unwrap();
+                Task::none()
+            }
         }
     }
 
@@ -186,4 +193,38 @@ where
         )
     ]
         .into()
+}
+
+/// A subscription to listen for new payloads
+struct PayloadListener {
+    rx: mpsc::Receiver<serde_json::Value>,
+}
+
+impl<H, I> iced_native::subscription::Recipe<H, I> for PayloadListener
+where
+    H: std::hash::Hasher,
+{
+    type Output = Message;
+
+    fn hash(&self, state: &mut H) {
+        use std::hash::Hash;
+        "PayloadListener".hash(state);
+    }
+
+    fn stream(
+        self: Box<Self>,
+        _input: iced_native::SubscriptionInput<I>,
+    ) -> futures::stream::BoxStream<'static, Self::Output> {
+        use futures::stream::StreamExt;
+
+        let rx = self.rx;
+
+        futures::stream::unfold(rx, |mut rx| async {
+            match rx.recv().await {
+                Some(payload) => Some((Message::NewPayload(payload), rx)),
+                None => None,
+            }
+        })
+        .boxed()
+    }
 }

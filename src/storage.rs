@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use chrono::Utc;
 use serde_json::Value;
 
+/// Storage struct to manage data persistence
 #[derive(Clone)]
 pub struct Storage {
     data: Arc<Mutex<Vec<(String, Value)>>>,
@@ -12,6 +13,7 @@ pub struct Storage {
 }
 
 impl Storage {
+    /// Creates a new Storage instance
     pub fn new() -> io::Result<Self> {
         // Create storage directory in user's home directory
         let mut storage_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
@@ -39,6 +41,7 @@ impl Storage {
         })
     }
 
+    /// Adds a JSON value to the storage
     pub fn add_json(&self, json: Value) -> io::Result<()> {
         let id = Utc::now().timestamp_millis().to_string();
         
@@ -52,11 +55,13 @@ impl Storage {
         self.save_to_file()
     }
 
+    /// Retrieves all stored data
     pub fn get_all(&self) -> Vec<(String, Value)> {
         let data = self.data.lock().unwrap();
         data.clone()
     }
 
+    /// Deletes an item by ID
     pub fn delete(&self, id: &str) -> io::Result<bool> {
         let found;
         {
@@ -79,6 +84,7 @@ impl Storage {
         Ok(found)
     }
 
+    /// Saves the current state to a file
     fn save_to_file(&self) -> io::Result<()> {
         let data_file = self.storage_dir.join("data.json");
         let data = self.data.lock().unwrap();

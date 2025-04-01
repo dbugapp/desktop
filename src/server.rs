@@ -1,6 +1,7 @@
 use warp::{hyper::Method, Filter};
 use crate::storage::Storage;
 
+/// Starts the server and listens for incoming requests
 pub async fn listen() {
 
     let storage = Storage::new().expect("Failed to initialize storage");

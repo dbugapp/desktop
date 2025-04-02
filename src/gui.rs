@@ -1,14 +1,17 @@
-use iced::event::{self, Event};
-use iced::keyboard;
+use iced::event::Event;
 use iced::keyboard::key;
-use iced::widget::{
-    self, button, center, column, container, horizontal_space, mouse_area,
-    opaque, row, stack, text, svg,
-};
-use iced::{Bottom, Color, Element, Fill, Subscription, Task};
+use iced::{keyboard, Length};
 
+use crate::gui::Message::Server;
+use crate::server;
+use crate::server::ServerMessage;
 use crate::settings::{Settings, Theme};
 use crate::storage::Storage;
+use iced::widget::{
+    self, button, center, column, container, horizontal_space, mouse_area, opaque, row, scrollable,
+    stack, svg, text,
+};
+use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
@@ -36,22 +39,33 @@ impl Default for App {
 
 /// Messages used for application state updates
 #[derive(Debug, Clone)]
-enum Message {
+#[allow(dead_code)]
+pub(crate) enum Message {
     ShowModal,
     HideModal,
     ThemeSelected(Theme),
     Event(Event),
+    Server(ServerMessage),
 }
 
 impl App {
-    /// Subscribes to application events
     fn subscription(&self) -> Subscription<Message> {
-        event::listen().map(Message::Event)
+        Subscription::run(server::listen).map(Server)
     }
 
-    /// Updates application state based on messages
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            Server(server_message) => {
+                println!("{:?}", server_message);
+                match server_message {
+                    ServerMessage::PayloadReceived(value) => {
+                        if let Err(e) = self.storage.add_json(&value) {
+                            eprintln!("Failed to store payload: {}", e);
+                        }
+                    }
+                }
+                Task::none()
+            }
             Message::ShowModal => {
                 self.show_modal = true;
                 Task::none()
@@ -70,10 +84,10 @@ impl App {
             }
             Message::Event(event) => match event {
                 Event::Keyboard(keyboard::Event::KeyPressed {
-                                    key: keyboard::Key::Named(key::Named::Tab),
-                                    modifiers,
-                                    ..
-                                }) => {
+                    key: keyboard::Key::Named(key::Named::Tab),
+                    modifiers,
+                    ..
+                }) => {
                     if modifiers.shift() {
                         widget::focus_previous()
                     } else {
@@ -81,9 +95,9 @@ impl App {
                     }
                 }
                 Event::Keyboard(keyboard::Event::KeyPressed {
-                                    key: keyboard::Key::Named(key::Named::Escape),
-                                    ..
-                                }) => {
+                    key: keyboard::Key::Named(key::Named::Escape),
+                    ..
+                }) => {
                     self.hide_modal();
                     Task::none()
                 }
@@ -95,37 +109,37 @@ impl App {
     /// Renders the application view
     fn view(&self) -> Element<Message> {
         let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
+        let storage_rows = column(
+            self.storage
+                .get_all()
+                .iter()
+                .map(|(_, value)| {
+                    container(row![text(format!("{}", value))].spacing(10))
+                        .style(container::rounded_box)
+                        .padding(10)
+                        .width(Fill)
+                        .into()
+                })
+                .collect::<Vec<_>>(),
+        )
+        .spacing(10)
+        .padding(10);
+        let scrollable_storage = scrollable(storage_rows).width(Fill).height(Fill);
         let content = container(
             column![
                 row![
                     horizontal_space(),
                     button(svg(handle).width(20).height(20)).on_press(Message::ShowModal)
                 ]
-                .height(Fill),
-                column(
-                    self.storage.get_all().iter().map(|(_, value)| {
-                        container(
-                            row![
-                                text(format!("{}", value))
-                            ]
-                            .spacing(10)
-                        )
-                        .style(container::rounded_box)
-                        .padding(10)
-                        .into()
-                    }).collect::<Vec<_>>()
-                )
-                .spacing(10)
-                .padding(10),
-                row![
-                    horizontal_space()
-                ]
-                .align_y(Bottom)
-                .height(Fill),
+                .height(Length::Shrink),
+                scrollable_storage,
+                row![horizontal_space()]
+                    .align_y(Bottom)
+                    .height(Length::Shrink),
             ]
-                .height(Fill),
+            .height(Fill),
         )
-            .padding(10);
+        .padding(10);
 
         if self.show_modal {
             let theme_selection = container(
@@ -140,9 +154,9 @@ impl App {
                 ]
                 .spacing(20),
             )
-                .width(300)
-                .padding(10)
-                .style(container::rounded_box);
+            .width(300)
+            .padding(10)
+            .style(container::rounded_box);
 
             modal(content, theme_selection, Message::HideModal)
         } else {
@@ -185,5 +199,5 @@ where
             .on_press(on_blur)
         )
     ]
-        .into()
+    .into()
 }

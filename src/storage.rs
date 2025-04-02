@@ -18,7 +18,7 @@ impl Storage {
         // Create storage directory in user's home directory
         let mut storage_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
         storage_dir.push(".dbug_desktop");
-        
+
         if !storage_dir.exists() {
             fs::create_dir_all(&storage_dir)?;
         }
@@ -42,15 +42,15 @@ impl Storage {
     }
 
     /// Adds a JSON value to the storage
-    pub fn add_json(&self, json: Value) -> io::Result<()> {
+    pub fn add_json(&self, json: &Value) -> io::Result<()> {
         let id = Utc::now().timestamp_millis().to_string();
-        
+
         // Add to memory
         {
             let mut data = self.data.lock().unwrap();
             data.push((id.clone(), json.clone()));
         }
-        
+
         // Save to file
         self.save_to_file()
     }
@@ -62,7 +62,7 @@ impl Storage {
     }
 
     /// Deletes an item by ID
-    pub fn delete(&self, id: &str) -> io::Result<bool> {
+    pub fn _delete(&self, id: &str) -> io::Result<bool> {
         let found;
         {
             let mut data = self.data.lock().unwrap();
@@ -76,11 +76,11 @@ impl Storage {
             });
             found = data.len() < len_before;
         }
-        
+
         if found {
             self.save_to_file()?;
         }
-        
+
         Ok(found)
     }
 
@@ -88,13 +88,13 @@ impl Storage {
     fn save_to_file(&self) -> io::Result<()> {
         let data_file = self.storage_dir.join("data.json");
         let data = self.data.lock().unwrap();
-        
+
         let file = OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
             .open(data_file)?;
-            
+
         serde_json::to_writer_pretty(file, &*data)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
     }

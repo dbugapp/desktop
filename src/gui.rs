@@ -59,6 +59,13 @@ impl App {
         match message {
             Server(server_message) => {
                 println!("{:?}", server_message);
+                match server_message {
+                    ServerMessage::PayloadReceived(value) => {
+                        if let Err(e) = self.storage.add_json(&value) {
+                            eprintln!("Failed to store payload: {}", e);
+                        }
+                    }
+                }
                 Task::none()
             }
             Message::ShowModal => {

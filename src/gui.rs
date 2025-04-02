@@ -1,5 +1,5 @@
 use iced::event::{self, Event};
-use iced::keyboard;
+use iced::{keyboard, Length};
 use iced::keyboard::key;
 use iced::widget::{
     self, button, center, column, container, horizontal_space, mouse_area,
@@ -7,6 +7,7 @@ use iced::widget::{
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 use iced::futures::channel::mpsc;
+use iced::widget::scrollable;
 
 use crate::settings::{Settings, Theme};
 use crate::storage::Storage;
@@ -116,34 +117,43 @@ impl App {
     /// Renders the application view
     fn view(&self) -> Element<Message> {
         let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
+
+        // Create the storage rows column
+        let storage_rows = column(
+            self.storage.get_all().iter().map(|(_, value)| {
+                container(
+                    row![
+                    text(format!("{}", value))
+                ]
+                        .spacing(10)
+                )
+                    .style(container::rounded_box)
+                    .padding(10)
+                    .into()
+            }).collect::<Vec<_>>()
+        )
+            .spacing(10)
+            .padding(10);
+
+        // Wrap the storage rows in a scrollable container
+        let scrollable_storage = scrollable(storage_rows)
+            .width(Length::Fill)
+            .height(Length::Fill);
+
         let content = container(
             column![
-                row![
-                    horizontal_space(),
-                    button(svg(handle).width(20).height(20)).on_press(Message::ShowModal)
-                ]
-                .height(Fill),
-                column(
-                    self.storage.get_all().iter().map(|(_, value)| {
-                        container(
-                            row![
-                                text(format!("{}", value))
-                            ]
-                            .spacing(10)
-                        )
-                        .style(container::rounded_box)
-                        .padding(10)
-                        .into()
-                    }).collect::<Vec<_>>()
-                )
-                .spacing(10)
-                .padding(10),
-                row![
-                    horizontal_space()
-                ]
-                .align_y(Bottom)
-                .height(Fill),
+            row![
+                horizontal_space(),
+                button(svg(handle).width(20).height(20)).on_press(Message::ShowModal)
             ]
+            .height(Length::Shrink),
+            scrollable_storage,
+            row![
+                horizontal_space()
+            ]
+            .align_y(Bottom)
+            .height(Length::Shrink),
+        ]
                 .height(Fill),
         )
             .padding(10);

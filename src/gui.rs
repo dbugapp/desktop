@@ -12,7 +12,7 @@ use crate::gui::Message::Server;
 use crate::settings::{Settings, Theme};
 use crate::storage::Storage;
 use crate::server;
-use crate::server::ServerInput;
+use crate::server::ServerMessage;
 
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
@@ -47,23 +47,14 @@ pub(crate) enum Message {
     Server(ServerMessage),
 }
 
-#[derive(Debug, Clone)]
-pub enum ServerMessage { // The server event types
-    Ready(mpsc::Sender<ServerInput>),
-    PayloadReceived(Value),
-    WorkFinished,
-}
 
 
 impl App {
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::run(server::listen).map(Message::Server)
-
+        Subscription::run(server::listen).map(Server)
     }
 
-
-    /// Updates application state based on messages
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Server(server_message) => {

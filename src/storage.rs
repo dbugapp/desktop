@@ -42,7 +42,7 @@ impl Storage {
     }
 
     /// Adds a JSON value to the storage
-    pub fn add_json(&self, json: Value) -> io::Result<()> {
+    pub fn add_json(&self, json: &Value) -> io::Result<()> {
         let id = Utc::now().timestamp_millis().to_string();
 
         // Add to memory

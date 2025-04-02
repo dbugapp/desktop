@@ -1,11 +1,18 @@
 use iced::futures::Stream;
 use iced::stream;
 use iced::futures::channel::mpsc;
-
+use serde_json::Value;
 use warp::{hyper::Method, Filter};
 use crate::storage::Storage;
+use iced::futures::SinkExt; // Import SinkExt
 use crate::gui::{Message}; // Import from gui.rs
 
+#[derive(Debug, Clone)]
+pub enum ServerMessage { // The server event types
+    Ready(mpsc::Sender<ServerInput>),
+    PayloadReceived(Value),
+    WorkFinished,
+}
 
 
 pub(crate) enum ServerInput { // Make non-public if needed only for the server
@@ -13,7 +20,7 @@ pub(crate) enum ServerInput { // Make non-public if needed only for the server
 }
 
 
- pub fn listen() -> impl Stream<Item = Message> {
+ pub fn listen() -> impl Stream<Item = ServerMessage> {
 
      stream::channel(100, |mut output| async move {
          let storage = Storage::new().expect("Failed to initialize storage");
@@ -22,15 +29,26 @@ pub(crate) enum ServerInput { // Make non-public if needed only for the server
              .and(warp::body::json())
              .map({
                  let storage = storage.clone();
-                 move |body: serde_json::Value| {
-                     println!("Received payload: {}", body); // Log the received payload
-                     // Store the payload
-                     if let Err(e) = storage.add_json(body.clone()) {
-                         eprintln!("Failed to store payload: {}", e);
-                     }
-                     format!("hello {}!", body) // Return the formatted string
+                 let mut output = output.clone();
+                 move |body: Value| {
+                     println!("Received payload: {}", body);
+
+                     let storage = storage.clone();
+                     let mut output_clone = output.clone();
+
+                     tokio::task::spawn(async move {
+                         if let Err(e) = storage.add_json(&body) {
+                             eprintln!("Failed to store payload: {}", e);
+                         }
+                         let _ = output_clone.send(ServerMessage::PayloadReceived(body)).await;
+                     });
+
+
+                     "Hello!".to_string()
                  }
              });
+
+
 
          let cors = warp::cors()
              .allow_any_origin()

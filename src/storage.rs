@@ -66,9 +66,7 @@ impl Storage {
         self.save_to_file()?;
 
         // Notify about the change
-        if let Some(cmd) = StorageCommand::AddJson(json).into() {
-            self.send_event(cmd);
-        }
+        self.notify_updated();
         
         Ok(())
     }
@@ -93,25 +91,23 @@ impl Storage {
             self.save_to_file()?;
             
             // Notify about the change
-            if let Some(cmd) = StorageCommand::Delete(id.to_string()).into() {
-                self.send_event(cmd);
-            }
+            self.notify_updated();
         }
         
         Ok(found)
     }
 
     /// Helper method to send events to the event channel
-    fn send_event(&self, command: StorageCommand) {
+    fn notify_updated(&self) {
         let event_sender = self.event_sender.lock().unwrap();
         if let Some(sender) = event_sender.as_ref() {
             let mut sender_clone = sender.clone();
             // Use tokio spawn to avoid blocking on send
             tokio::spawn(async move {
-                if let Err(e) = sender_clone.try_send(command) {
+                if let Err(e) = sender_clone.try_send(StorageCommand::Updated) {
                     println!("Failed to send storage event: {}", e);
                 } else {
-                    println!("Successfully sent storage event");
+                    println!("Successfully sent storage update event");
                 }
             });
         } else {
@@ -132,11 +128,5 @@ impl Storage {
             
         serde_json::to_writer_pretty(file, &*data)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-    }
-}
-
-impl StorageCommand {
-    fn into(self) -> Option<StorageCommand> {
-        Some(self)
     }
 }

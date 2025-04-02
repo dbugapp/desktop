@@ -1,15 +1,12 @@
 use iced::futures::channel::mpsc;
-use iced::futures::SinkExt;
 use iced::futures::Stream;
 use iced::futures::StreamExt;
 use sipper::{Never, Sipper, sipper};
-use serde_json::Value;
 
 /// Commands that can be sent to the storage
 #[derive(Debug, Clone)]
 pub enum StorageCommand {
-    AddJson(Value),
-    Delete(String),
+    Updated,
 }
 
 /// Events that the storage can emit
@@ -33,23 +30,13 @@ pub fn storage_sipper() -> impl Sipper<Never, StorageEvent> {
         // Process commands and send events in an infinite loop
         loop {
             match receiver.next().await {
-                Some(command) => {
-                    match &command {
-                        StorageCommand::AddJson(_) => {
-                            println!("Storage sipper: processing AddJson command");
-                        },
-                        StorageCommand::Delete(id) => {
-                            println!("Storage sipper: processing Delete command for id: {}", id);
-                        }
-                    }
-                    
+                Some(StorageCommand::Updated) => {
                     // Simulate processing time
                     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
                     
                     // Send the StorageUpdated event
                     println!("Storage sipper: sending StorageUpdated event");
                     output.send(StorageEvent::StorageUpdated).await;
-                    println!("Successfully sent StorageUpdated event");
                 }
                 None => {
                     println!("Storage sipper: channel closed, waiting...");

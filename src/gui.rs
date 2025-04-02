@@ -1,13 +1,11 @@
-use iced::event::{self, Event};
+use iced::event::{Event};
 use iced::keyboard;
-use iced::futures::channel::mpsc;
 use iced::keyboard::key;
 use iced::widget::{
     self, button, center, column, container, horizontal_space, mouse_area,
     opaque, row, stack, text, svg,
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
-use serde_json::Value;
 use crate::gui::Message::Server;
 use crate::settings::{Settings, Theme};
 use crate::storage::Storage;
@@ -39,6 +37,7 @@ impl Default for App {
 
 /// Messages used for application state updates
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub(crate) enum Message {
     ShowModal,
     HideModal,

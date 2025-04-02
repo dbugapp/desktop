@@ -62,7 +62,7 @@ impl Storage {
     }
 
     /// Deletes an item by ID
-    pub fn delete(&self, id: &str) -> io::Result<bool> {
+    pub fn _delete(&self, id: &str) -> io::Result<bool> {
         let found;
         {
             let mut data = self.data.lock().unwrap();

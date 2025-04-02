@@ -1,26 +1,23 @@
 use iced::futures::Stream;
 use iced::stream;
-use iced::futures::channel::mpsc;
 use serde_json::Value;
 use warp::{hyper::Method, Filter};
-use crate::storage::Storage;
-use iced::futures::SinkExt; // Import SinkExt
-use crate::gui::{Message}; // Import from gui.rs
+use iced::futures::SinkExt;
 
 #[derive(Debug, Clone)]
-pub enum ServerMessage { // The server event types
+pub enum ServerMessage {
     PayloadReceived(Value),
 }
 
 
-pub(crate) enum ServerInput { // Make non-public if needed only for the server
+pub(crate) enum _ServerInput {
     DoSomeWork,
 }
 
 
  pub fn listen() -> impl Stream<Item = ServerMessage> {
 
-     stream::channel(100, |mut output| async move {
+     stream::channel(100, |output| async move {
          let payload = warp::post()
              .and(warp::body::json())
              .map({

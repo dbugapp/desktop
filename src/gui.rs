@@ -1,68 +1,74 @@
 use iced::event::{self, Event};
-use iced::{keyboard, Length};
+use iced::keyboard;
+use iced::futures::channel::mpsc;
+use iced::keyboard::key;
 use iced::widget::{
     self, button, center, column, container, horizontal_space, mouse_area,
     opaque, row, stack, text, svg,
 };
-use iced::{keyboard::key, Bottom, Color, Element, Fill, Subscription, Task};
-
-use crate::storage_widget::{StorageWidget, Message as StorageWidgetMessage};
-
-
+use iced::{Bottom, Color, Element, Fill, Subscription, Task};
+use serde_json::Value;
 use crate::settings::{Settings, Theme};
 use crate::storage::Storage;
+use crate::server;
+use crate::server::ServerInput;
 
+/// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
     iced::application("Modal - Iced", App::update, App::view)
-        .subscription(App::subscription)
-        .run()
+        .subscription(App::subscription).run()
 }
 
-
-
-
 /// Application state and logic
-pub struct App {
+struct App {
     show_modal: bool,
     settings: Settings,
     storage: Storage,
-    storage_widget: StorageWidget,
 }
 
 impl Default for App {
     fn default() -> Self {
-        let storage = Storage::new().expect("Failed to initialize storage");
-
         Self {
             show_modal: false,
             settings: Settings::load(),
-            storage_widget: StorageWidget::new(storage.clone()),
-            storage,
+            storage: Storage::new().expect("Failed to initialize storage"),
         }
     }
 }
 
 /// Messages used for application state updates
 #[derive(Debug, Clone)]
-enum Message {
+pub(crate) enum Message {
     ShowModal,
     HideModal,
     ThemeSelected(Theme),
     Event(Event),
-    StorageWidget(StorageWidgetMessage),
+    Server(ServerMessage), // Renamed for clarity
+
 }
+
+#[derive(Debug, Clone)]
+pub enum ServerMessage { // The server event types
+    Ready(mpsc::Sender<ServerInput>),
+    PayloadReceived(Value),
+    WorkFinished,
+
+}
+
 
 impl App {
 
     fn subscription(&self) -> Subscription<Message> {
-        // We don't need a timer-based subscription
-        Subscription::none()
+        Subscription::run(server::listen)
     }
 
 
     /// Updates application state based on messages
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            Message::Server(ServerMessage) => {
+                Task::none()
+            }
             Message::ShowModal => {
                 self.show_modal = true;
                 Task::none()
@@ -71,10 +77,6 @@ impl App {
                 self.hide_modal();
                 Task::none()
             }
-            Message::StorageWidget(widget_msg) => {
-                self.storage_widget.update(widget_msg)
-                    .map(Message::StorageWidget)
-            },
             Message::ThemeSelected(theme) => {
                 self.settings.theme = theme;
                 if let Err(e) = self.settings.save() {
@@ -110,24 +112,34 @@ impl App {
     /// Renders the application view
     fn view(&self) -> Element<Message> {
         let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
-
-        let storage_view = self.storage_widget.view()
-            .map(Message::StorageWidget);
-
         let content = container(
             column![
-            row![
-                horizontal_space(),
-                button(svg(handle).width(20).height(20)).on_press(Message::ShowModal)
+                row![
+                    horizontal_space(),
+                    button(svg(handle).width(20).height(20)).on_press(Message::ShowModal)
+                ]
+                .height(Fill),
+                column(
+                    self.storage.get_all().iter().map(|(_, value)| {
+                        container(
+                            row![
+                                text(format!("{}", value))
+                            ]
+                            .spacing(10)
+                        )
+                        .style(container::rounded_box)
+                        .padding(10)
+                        .into()
+                    }).collect::<Vec<_>>()
+                )
+                .spacing(10)
+                .padding(10),
+                row![
+                    horizontal_space()
+                ]
+                .align_y(Bottom)
+                .height(Fill),
             ]
-            .height(Length::Shrink),
-            storage_view,
-            row![
-                horizontal_space()
-            ]
-            .align_y(Bottom)
-            .height(Length::Shrink),
-        ]
                 .height(Fill),
         )
             .padding(10);
@@ -143,7 +155,7 @@ impl App {
                     ]
                     .spacing(10)
                 ]
-                .spacing(20),
+                    .spacing(20),
             )
                 .width(300)
                 .padding(10)

@@ -3,13 +3,7 @@ mod storage;
 mod settings;
 mod server;
 
-/// Main entry point of the application
-#[tokio::main]
-pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Run server in background task
-
-    // Run GUI on main thread
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     gui::gui()?;
-
     Ok(())
 }

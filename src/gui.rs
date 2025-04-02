@@ -8,6 +8,7 @@ use iced::widget::{
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 use serde_json::Value;
+use crate::gui::Message::Server;
 use crate::settings::{Settings, Theme};
 use crate::storage::Storage;
 use crate::server;
@@ -43,8 +44,7 @@ pub(crate) enum Message {
     HideModal,
     ThemeSelected(Theme),
     Event(Event),
-    Server(ServerMessage), // Renamed for clarity
-
+    Server(ServerMessage),
 }
 
 #[derive(Debug, Clone)]
@@ -52,21 +52,22 @@ pub enum ServerMessage { // The server event types
     Ready(mpsc::Sender<ServerInput>),
     PayloadReceived(Value),
     WorkFinished,
-
 }
 
 
 impl App {
 
     fn subscription(&self) -> Subscription<Message> {
-        Subscription::run(server::listen)
+        Subscription::run(server::listen).map(Message::Server)
+
     }
 
 
     /// Updates application state based on messages
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::Server(ServerMessage) => {
+            Server(server_message) => {
+                println!("{:?}", server_message);
                 Task::none()
             }
             Message::ShowModal => {

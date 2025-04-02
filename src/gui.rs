@@ -126,6 +126,7 @@ impl App {
                     text(format!("{}", value))
                 ]
                         .spacing(10)
+                        .width(Fill)
                 )
                     .style(container::rounded_box)
                     .padding(10)
@@ -137,8 +138,8 @@ impl App {
 
         // Wrap the storage rows in a scrollable container
         let scrollable_storage = scrollable(storage_rows)
-            .width(Length::Fill)
-            .height(Length::Fill);
+            .width(Fill)
+            .height(Fill);
 
         let content = container(
             column![

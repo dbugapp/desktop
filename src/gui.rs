@@ -1,40 +1,43 @@
 use iced::event::{self, Event};
 use iced::{keyboard, Length};
-use iced::keyboard::key;
 use iced::widget::{
     self, button, center, column, container, horizontal_space, mouse_area,
     opaque, row, stack, text, svg,
 };
-use iced::{Bottom, Color, Element, Fill, Subscription, Task};
-use iced::futures::channel::mpsc;
-use iced::widget::scrollable;
+use iced::{keyboard::key, Bottom, Color, Element, Fill, Subscription, Task};
+
+use crate::storage_widget::{StorageWidget, Message as StorageWidgetMessage};
+
 
 use crate::settings::{Settings, Theme};
 use crate::storage::Storage;
-use crate::storage_events::{StorageCommand, StorageEvent, storage_sipper};
 
-/// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
     iced::application("Modal - Iced", App::update, App::view)
         .subscription(App::subscription)
         .run()
 }
 
+
+
+
 /// Application state and logic
 pub struct App {
     show_modal: bool,
     settings: Settings,
     storage: Storage,
-    storage_sender: Option<mpsc::Sender<StorageCommand>>,
+    storage_widget: StorageWidget,
 }
 
 impl Default for App {
     fn default() -> Self {
+        let storage = Storage::new().expect("Failed to initialize storage");
+
         Self {
             show_modal: false,
             settings: Settings::load(),
-            storage: Storage::new().expect("Failed to initialize storage"),
-            storage_sender: None,
+            storage_widget: StorageWidget::new(storage.clone()),
+            storage,
         }
     }
 }
@@ -46,17 +49,16 @@ enum Message {
     HideModal,
     ThemeSelected(Theme),
     Event(Event),
-    StorageEvent(StorageEvent),
+    StorageWidget(StorageWidgetMessage),
 }
 
 impl App {
-    /// Subscribes to application events
+
     fn subscription(&self) -> Subscription<Message> {
-        iced::Subscription::batch(vec![
-            event::listen().map(Message::Event),
-            iced::Subscription::run(|| storage_sipper()).map(Message::StorageEvent),
-        ])
+        // We don't need a timer-based subscription
+        Subscription::none()
     }
+
 
     /// Updates application state based on messages
     fn update(&mut self, message: Message) -> Task<Message> {
@@ -69,6 +71,10 @@ impl App {
                 self.hide_modal();
                 Task::none()
             }
+            Message::StorageWidget(widget_msg) => {
+                self.storage_widget.update(widget_msg)
+                    .map(Message::StorageWidget)
+            },
             Message::ThemeSelected(theme) => {
                 self.settings.theme = theme;
                 if let Err(e) = self.settings.save() {
@@ -98,19 +104,6 @@ impl App {
                 }
                 _ => Task::none(),
             },
-            Message::StorageEvent(event) => match event {
-                StorageEvent::Connected(sender) => {
-                    println!("Connected to storage event system");
-                    self.storage_sender = Some(sender.clone());
-                    // Connect the storage to the event system
-                    self.storage.set_event_sender(sender);
-                    Task::none()
-                }
-                StorageEvent::StorageUpdated => {
-                    println!("Storage updated, refreshing UI");
-                    Task::none()
-                }
-            }
         }
     }
 
@@ -118,28 +111,8 @@ impl App {
     fn view(&self) -> Element<Message> {
         let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
 
-        // Create the storage rows column
-        let storage_rows = column(
-            self.storage.get_all().iter().map(|(_, value)| {
-                container(
-                    row![
-                    text(format!("{}", value))
-                ]
-                        .spacing(10)
-                        .width(Fill)
-                )
-                    .style(container::rounded_box)
-                    .padding(10)
-                    .into()
-            }).collect::<Vec<_>>()
-        )
-            .spacing(10)
-            .padding(10);
-
-        // Wrap the storage rows in a scrollable container
-        let scrollable_storage = scrollable(storage_rows)
-            .width(Fill)
-            .height(Fill);
+        let storage_view = self.storage_widget.view()
+            .map(Message::StorageWidget);
 
         let content = container(
             column![
@@ -148,7 +121,7 @@ impl App {
                 button(svg(handle).width(20).height(20)).on_press(Message::ShowModal)
             ]
             .height(Length::Shrink),
-            scrollable_storage,
+            storage_view,
             row![
                 horizontal_space()
             ]

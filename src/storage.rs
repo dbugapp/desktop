@@ -4,17 +4,38 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use chrono::Utc;
 use serde_json::Value;
-use iced::futures::channel::mpsc;
 
-use crate::storage_events::StorageCommand;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+// Type for callback functions that notify listeners
+type ListenerCallback = Box<dyn Fn() -> Message + Send + Sync>;
+
+// Type for the actual message that will be sent
+#[derive(Debug, Clone)]
+pub enum Message {
+    DataChanged,
+    // You can add more specific message types as needed
+}
 
 /// Storage struct to manage data persistence
 #[derive(Clone)]
 pub struct Storage {
     data: Arc<Mutex<Vec<(String, Value)>>>,
     storage_dir: PathBuf,
-    event_sender: Arc<Mutex<Option<mpsc::Sender<StorageCommand>>>>,
+    listeners: Arc<Mutex<HashMap<String, ListenerCallback>>>,
+    next_listener_id: Arc<AtomicUsize>,
 }
+
+// In storage.rs
+impl Message {
+    pub fn to_widget_message(&self) -> crate::storage_widget::Message {
+        match self {
+            Message::DataChanged => crate::storage_widget::Message::DataChanged,
+        }
+    }
+}
+
 
 impl Storage {
     /// Creates a new Storage instance
@@ -42,14 +63,9 @@ impl Storage {
         Ok(Self {
             data: Arc::new(Mutex::new(data)),
             storage_dir,
-            event_sender: Arc::new(Mutex::new(None)),
+            listeners: Arc::new(Mutex::new(HashMap::new())),
+            next_listener_id: Arc::new(AtomicUsize::new(0)),
         })
-    }
-
-    pub fn set_event_sender(&mut self, sender: mpsc::Sender<StorageCommand>) {
-        println!("Setting storage event sender");
-        let mut event_sender = self.event_sender.lock().unwrap();
-        *event_sender = Some(sender);
     }
 
     /// Adds a JSON value to the storage
@@ -64,10 +80,7 @@ impl Storage {
         
         // Save to file
         self.save_to_file()?;
-
-        // Notify about the change
-        self.notify_updated();
-        
+        self.notify_listeners();
         Ok(())
     }
 
@@ -89,30 +102,10 @@ impl Storage {
         
         if found {
             self.save_to_file()?;
-            
-            // Notify about the change
-            self.notify_updated();
+            self.notify_listeners();
         }
         
         Ok(found)
-    }
-
-    /// Helper method to send events to the event channel
-    fn notify_updated(&self) {
-        let event_sender = self.event_sender.lock().unwrap();
-        if let Some(sender) = event_sender.as_ref() {
-            let mut sender_clone = sender.clone();
-            // Use tokio spawn to avoid blocking on send
-            tokio::spawn(async move {
-                if let Err(e) = sender_clone.try_send(StorageCommand::Updated) {
-                    println!("Failed to send storage event: {}", e);
-                } else {
-                    println!("Successfully sent storage update event");
-                }
-            });
-        } else {
-            println!("Warning: No event sender available");
-        }
     }
 
     /// Saves the current state to a file
@@ -129,4 +122,32 @@ impl Storage {
         serde_json::to_writer_pretty(file, &*data)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
     }
+
+    pub fn add_listener<F, M>(&self, callback: F) -> String
+    where
+        F: Fn() -> M + Send + Sync + 'static,
+        M: 'static,
+    {
+        let id = self.next_listener_id.fetch_add(1, Ordering::SeqCst).to_string();
+
+        let mut listeners = self.listeners.lock().unwrap();
+        listeners.insert(id.clone(), Box::new(move || Message::DataChanged));
+
+        id
+    }
+
+    /// Removes a listener
+    pub fn remove_listener(&self, id: &str) {
+        let mut listeners = self.listeners.lock().unwrap();
+        listeners.remove(id);
+    }
+
+    /// Notifies all listeners about data changes
+    fn notify_listeners(&self) {
+        let listeners = self.listeners.lock().unwrap();
+        for callback in listeners.values() {
+            callback();
+        }
+    }
+
 }

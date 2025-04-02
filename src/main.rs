@@ -2,6 +2,7 @@ mod server;
 mod gui;
 mod storage;
 mod settings;
+mod storage_events;
 
 /// Main entry point of the application
 #[tokio::main]

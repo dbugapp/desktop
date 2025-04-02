@@ -6,9 +6,11 @@ use iced::widget::{
     opaque, row, stack, text, svg,
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
+use iced::futures::channel::mpsc;
 
 use crate::settings::{Settings, Theme};
 use crate::storage::Storage;
+use crate::storage_events::{StorageCommand, StorageEvent, storage_sipper};
 
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
@@ -18,10 +20,11 @@ pub fn gui() -> iced::Result {
 }
 
 /// Application state and logic
-struct App {
+pub struct App {
     show_modal: bool,
     settings: Settings,
     storage: Storage,
+    storage_sender: Option<mpsc::Sender<StorageCommand>>,
 }
 
 impl Default for App {
@@ -30,6 +33,7 @@ impl Default for App {
             show_modal: false,
             settings: Settings::load(),
             storage: Storage::new().expect("Failed to initialize storage"),
+            storage_sender: None,
         }
     }
 }
@@ -41,12 +45,16 @@ enum Message {
     HideModal,
     ThemeSelected(Theme),
     Event(Event),
+    StorageEvent(StorageEvent),
 }
 
 impl App {
     /// Subscribes to application events
     fn subscription(&self) -> Subscription<Message> {
-        event::listen().map(Message::Event)
+        iced::Subscription::batch(vec![
+            event::listen().map(Message::Event),
+            iced::Subscription::run(|| storage_sipper()).map(Message::StorageEvent),
+        ])
     }
 
     /// Updates application state based on messages
@@ -89,6 +97,19 @@ impl App {
                 }
                 _ => Task::none(),
             },
+            Message::StorageEvent(event) => match event {
+                StorageEvent::Connected(sender) => {
+                    println!("Connected to storage event system");
+                    self.storage_sender = Some(sender.clone());
+                    // Connect the storage to the event system
+                    self.storage.set_event_sender(sender);
+                    Task::none()
+                }
+                StorageEvent::StorageUpdated => {
+                    println!("Storage updated, refreshing UI");
+                    Task::none()
+                }
+            }
         }
     }
 

@@ -4,12 +4,16 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use chrono::Utc;
 use serde_json::Value;
+use iced::futures::channel::mpsc;
+
+use crate::storage_events::StorageCommand;
 
 /// Storage struct to manage data persistence
 #[derive(Clone)]
 pub struct Storage {
     data: Arc<Mutex<Vec<(String, Value)>>>,
     storage_dir: PathBuf,
+    event_sender: Arc<Mutex<Option<mpsc::Sender<StorageCommand>>>>,
 }
 
 impl Storage {
@@ -38,7 +42,14 @@ impl Storage {
         Ok(Self {
             data: Arc::new(Mutex::new(data)),
             storage_dir,
+            event_sender: Arc::new(Mutex::new(None)),
         })
+    }
+
+    pub fn set_event_sender(&mut self, sender: mpsc::Sender<StorageCommand>) {
+        println!("Setting storage event sender");
+        let mut event_sender = self.event_sender.lock().unwrap();
+        *event_sender = Some(sender);
     }
 
     /// Adds a JSON value to the storage
@@ -52,7 +63,14 @@ impl Storage {
         }
         
         // Save to file
-        self.save_to_file()
+        self.save_to_file()?;
+
+        // Notify about the change
+        if let Some(cmd) = StorageCommand::AddJson(json).into() {
+            self.send_event(cmd);
+        }
+        
+        Ok(())
     }
 
     /// Retrieves all stored data
@@ -67,21 +85,38 @@ impl Storage {
         {
             let mut data = self.data.lock().unwrap();
             let len_before = data.len();
-            data.retain(|(item_id, _)| {
-                if item_id == id {
-                    false // Remove this item
-                } else {
-                    true // Keep this item
-                }
-            });
+            data.retain(|(item_id, _)| item_id != id);
             found = data.len() < len_before;
         }
         
         if found {
             self.save_to_file()?;
+            
+            // Notify about the change
+            if let Some(cmd) = StorageCommand::Delete(id.to_string()).into() {
+                self.send_event(cmd);
+            }
         }
         
         Ok(found)
+    }
+
+    /// Helper method to send events to the event channel
+    fn send_event(&self, command: StorageCommand) {
+        let event_sender = self.event_sender.lock().unwrap();
+        if let Some(sender) = event_sender.as_ref() {
+            let mut sender_clone = sender.clone();
+            // Use tokio spawn to avoid blocking on send
+            tokio::spawn(async move {
+                if let Err(e) = sender_clone.try_send(command) {
+                    println!("Failed to send storage event: {}", e);
+                } else {
+                    println!("Successfully sent storage event");
+                }
+            });
+        } else {
+            println!("Warning: No event sender available");
+        }
     }
 
     /// Saves the current state to a file
@@ -97,5 +132,11 @@ impl Storage {
             
         serde_json::to_writer_pretty(file, &*data)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+    }
+}
+
+impl StorageCommand {
+    fn into(self) -> Option<StorageCommand> {
+        Some(self)
     }
 }

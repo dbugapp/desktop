@@ -5,8 +5,9 @@ use iced::{keyboard, Length};
 use crate::gui::Message::Server;
 use crate::server;
 use crate::server::ServerMessage;
-use crate::settings::{Settings, Theme};
+use crate::settings::{Appearance, Settings};
 use crate::storage::Storage;
+use crate::theme::{Mode, Theme};
 use iced::widget::{
     self, button, center, column, container, horizontal_space, mouse_area, opaque, row, scrollable,
     stack, svg, text,
@@ -25,6 +26,7 @@ struct App {
     show_modal: bool,
     settings: Settings,
     storage: Storage,
+    theme: Theme,
 }
 
 impl Default for App {
@@ -33,6 +35,7 @@ impl Default for App {
             show_modal: false,
             settings: Settings::load(),
             storage: Storage::new().expect("Failed to initialize storage"),
+            theme: Theme::default(),
         }
     }
 }
@@ -43,9 +46,9 @@ impl Default for App {
 pub(crate) enum Message {
     ShowModal,
     HideModal,
-    ThemeSelected(Theme),
     Event(Event),
     Server(ServerMessage),
+    AppearanceSelected(Appearance),
 }
 
 impl App {
@@ -74,8 +77,8 @@ impl App {
                 self.hide_modal();
                 Task::none()
             }
-            Message::ThemeSelected(theme) => {
-                self.settings.theme = theme;
+            Message::AppearanceSelected(appearance) => {
+                self.settings.appearance = appearance;
                 if let Err(e) = self.settings.save() {
                     eprintln!("Failed to save settings: {}", e);
                 }
@@ -129,7 +132,12 @@ impl App {
             column![
                 row![
                     horizontal_space(),
-                    button(svg(handle).width(20).height(20)).on_press(Message::ShowModal)
+                    button(svg(handle).width(20).height(20))
+                        .on_press(Message::ShowModal)
+                        .style(|_theme, _state| button::Style {
+                            background: Some(self.theme.primary.into()),
+                            ..button::Style::default()
+                        })
                 ]
                 .height(Length::Shrink),
                 scrollable_storage,
@@ -139,16 +147,23 @@ impl App {
             ]
             .height(Fill),
         )
-        .padding(10);
+        .padding(10)
+        .style(|_theme| container::Style {
+            background: Some(self.theme.bg.into()),
+            ..container::Style::default()
+        });
 
         if self.show_modal {
             let theme_selection = container(
                 column![
                     text("Select Theme").size(24),
                     row![
-                        button(text("Dark")).on_press(Message::ThemeSelected(Theme::Dark)),
-                        button(text("Light")).on_press(Message::ThemeSelected(Theme::Light)),
-                        button(text("System")).on_press(Message::ThemeSelected(Theme::System)),
+                        button(text("Dark"))
+                            .on_press(Message::AppearanceSelected(Appearance::Dark)),
+                        button(text("Light"))
+                            .on_press(Message::AppearanceSelected(Appearance::Light)),
+                        button(text("System"))
+                            .on_press(Message::AppearanceSelected(Appearance::System)),
                     ]
                     .spacing(10)
                 ]

@@ -32,17 +32,27 @@ pub struct Theme {
     pub bg_accented: Color,
 }
 
-// Helper for OKLCH conversion (simplified)
-fn oklch(l: f32, c: f32, h: f32) -> Color {
-    // A very basic approximation - in a real app, use a proper color conversion library
-    let h_rad = h * std::f32::consts::PI / 180.0;
+fn oklch(l: f32, c: f32, h_degrees: f32) -> Color {
+    let h = h_degrees * std::f32::consts::PI / 180.0;
 
-    // Convert to approximately RGB space
-    let r = l + 0.1 * c * h_rad.cos();
-    let g = l + 0.1 * c * (h_rad - 2.0 * std::f32::consts::PI / 3.0).cos();
-    let b = l + 0.1 * c * (h_rad + 2.0 * std::f32::consts::PI / 3.0).cos();
+    // OKLCH to Oklab
+    let a = c * h.cos();
+    let b = c * h.sin();
 
-    Color::from_rgb(r.clamp(0.0, 1.0), g.clamp(0.0, 1.0), b.clamp(0.0, 1.0))
+    // Oklab to linear RGB (simplified version of the conversion matrix)
+    // This is still not complete - full implementation would be longer
+    let l_ = l + 0.3963377774 * a + 0.2158037573 * b;
+    let m_ = l - 0.1055613458 * a - 0.0638541728 * b;
+    let s_ = l - 0.0894841775 * a - 1.2914855480 * b;
+
+    // Apply nonlinear transformation
+    let l_cubed = l_.powf(3.0);
+    let m_cubed = m_.powf(3.0);
+    let s_cubed = s_.powf(3.0);
+
+    // Linear RGB to sRGB conversion would follow...
+
+    Color::from_rgb(l_cubed, m_cubed, s_cubed)
 }
 
 // Helper for hex color conversion

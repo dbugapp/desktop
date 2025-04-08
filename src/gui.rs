@@ -7,10 +7,11 @@ use crate::server;
 use crate::server::ServerMessage;
 use crate::settings::{Appearance, Settings};
 use crate::storage::Storage;
-use crate::theme::{Mode, Theme};
+use crate::theme::theme::{Mode, Theme};
+use crate::theme::theme_helpers;
 use iced::widget::{
     self, button, center, column, container, horizontal_space, mouse_area, opaque, row, scrollable,
-    stack, svg, text,
+    stack, svg, text, Scrollable,
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 
@@ -118,7 +119,7 @@ impl App {
                 .iter()
                 .map(|(_, value)| {
                     container(row![text(format!("{}", value))].spacing(10))
-                        .style(container::rounded_box)
+                        .style(theme_helpers::Subtle::container(&self.theme))
                         .padding(10)
                         .width(Fill)
                         .into()
@@ -127,7 +128,10 @@ impl App {
         )
         .spacing(10)
         .padding(10);
-        let scrollable_storage = scrollable(storage_rows).width(Fill).height(Fill);
+        let scrollable_storage = scrollable(storage_rows)
+            .width(Fill)
+            .height(Fill)
+            .style(theme_helpers::Subtle::scrollbar(&self.theme));
         let content = container(
             column![
                 row![
@@ -135,7 +139,7 @@ impl App {
                     button(svg(handle).width(20).height(20))
                         .on_press(Message::ShowModal)
                         .style(|_theme, _state| button::Style {
-                            background: Some(self.theme.primary.into()),
+                            background: Some(self.theme.bg_elevated.into()),
                             ..button::Style::default()
                         })
                 ]

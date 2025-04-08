@@ -119,7 +119,7 @@ impl App {
                 .iter()
                 .map(|(_, value)| {
                     container(row![text(format!("{}", value))].spacing(10))
-                        .style(theme_helpers::Subtle::container(&self.theme))
+                        .style(move |_| theme_helpers::Subtle::container(&self.theme))
                         .padding(10)
                         .width(Fill)
                         .into()
@@ -128,10 +128,12 @@ impl App {
         )
         .spacing(10)
         .padding(10);
+
         let scrollable_storage = scrollable(storage_rows)
             .width(Fill)
             .height(Fill)
-            .style(theme_helpers::Subtle::scrollbar(&self.theme));
+            .style(move |_, _| theme_helpers::Subtle::scrollbar(&self.theme));
+
         let content = container(
             column![
                 row![

@@ -131,6 +131,7 @@ impl App {
 
         let scrollable_storage = scrollable(storage_rows)
             .width(Fill)
+            .spacing(5)
             .height(Fill)
             .style(move |_, _| theme_helpers::Subtle::scrollbar(&self.theme));
 
@@ -140,10 +141,7 @@ impl App {
                     horizontal_space(),
                     button(svg(handle).width(20).height(20))
                         .on_press(Message::ShowModal)
-                        .style(|_theme, _state| button::Style {
-                            background: Some(self.theme.bg_elevated.into()),
-                            ..button::Style::default()
-                        })
+                        .style(move |_, _| theme_helpers::Subtle::button(&self.theme)),
                 ]
                 .height(Length::Shrink),
                 scrollable_storage,

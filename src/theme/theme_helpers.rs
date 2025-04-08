@@ -1,5 +1,5 @@
 use super::theme::Theme;
-use iced::widget::{container, scrollable};
+use iced::widget::{button, container, scrollable};
 use iced::{Background, Color};
 
 pub struct Subtle {}
@@ -10,6 +10,15 @@ impl Subtle {
             color: app_theme.border_accented,
             width: 1.0,
             radius: 10.into(),
+        }
+    }
+
+    pub fn button(app_theme: &Theme) -> button::Style {
+        button::Style {
+            background: Some(Background::Color(app_theme.bg_elevated)),
+            text_color: app_theme.text,
+            border: Self::border(app_theme),
+            ..button::Style::default()
         }
     }
 

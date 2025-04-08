@@ -25,17 +25,20 @@ impl Subtle {
     pub fn scrollbar<'a>(
         app_theme: &'a Theme,
     ) -> impl Fn(&iced::Theme, scrollable::Status) -> scrollable::Style + 'a {
-        move |iced_theme, _| {
-            let create_rail = |app_theme: &Theme, iced_theme: &iced::Theme| {
-                let border = Self::border(app_theme)(iced_theme);
-                scrollable::Rail {
-                    background: Some(app_theme.bg_elevated.into()),
-                    border: border.clone(),
-                    scroller: scrollable::Scroller {
-                        color: app_theme.bg_accented.into(),
-                        border,
-                    },
-                }
+        move |_iced_theme, _status| {
+            let border = iced::Border {
+                color: app_theme.border_accented,
+                width: 1.0,
+                radius: 5.into(),
+            };
+
+            let rail = scrollable::Rail {
+                background: Some(app_theme.bg_elevated.into()),
+                border,
+                scroller: scrollable::Scroller {
+                    color: app_theme.bg_accented,
+                    border,
+                },
             };
 
             scrollable::Style {
@@ -44,8 +47,8 @@ impl Subtle {
                     text_color: Some(app_theme.text),
                     ..container::Style::default()
                 },
-                vertical_rail: create_rail(app_theme, iced_theme),
-                horizontal_rail: create_rail(app_theme, iced_theme),
+                vertical_rail: rail,
+                horizontal_rail: rail,
                 gap: None,
             }
         }

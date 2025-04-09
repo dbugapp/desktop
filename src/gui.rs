@@ -1,6 +1,6 @@
 use iced::event::Event;
 use iced::keyboard::key;
-use iced::{keyboard, Length, Theme};
+use iced::{keyboard, Border, Length, Theme};
 
 use crate::gui::Message::Server;
 use crate::server;
@@ -115,28 +115,45 @@ impl App {
     /// Renders the application view
     fn view(&self) -> Element<Message> {
         let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
+
+        let svg_widget = svg(handle).style(|theme: &Theme, _| svg::Style {
+            color: theme.palette().text.into(),
+            ..svg::Style::default()
+        });
         let storage_rows = column(
             self.storage
                 .get_all()
                 .iter()
                 .map(|(_, value)| {
-                    container(row![text(format!("{}", value))].spacing(10))
+                    container(row![text(format!("{}", value))])
                         .padding(10)
                         .width(Fill)
+                        .style(|theme: &Theme| {
+                            let palette = theme.extended_palette();
+                            container::Style {
+                                background: Some(palette.background.weak.color.into()),
+                                border: iced_core::border::rounded(5),
+                                ..container::Style::default()
+                            }
+                        })
                         .into()
                 })
                 .collect::<Vec<_>>(),
         )
-        .spacing(10);
+        .spacing(10)
+        .padding(10);
 
-        let scrollable_storage = scrollable(storage_rows).width(Fill).spacing(5).height(Fill);
+        let scrollable_storage = scrollable(storage_rows).width(Fill).spacing(0).height(Fill);
 
         let content = container(
             column![
                 row![
                     horizontal_space(),
-                    button(svg(handle).width(20).height(20)).on_press(Message::ShowModal),
+                    button(svg_widget.width(20).height(20))
+                        .style(button::secondary)
+                        .on_press(Message::ShowModal)
                 ]
+                .padding(10) // Add padding to the entire row
                 .height(Length::Shrink),
                 scrollable_storage,
                 row![horizontal_space()]
@@ -144,8 +161,7 @@ impl App {
                     .height(Length::Shrink),
             ]
             .height(Fill),
-        )
-        .padding(10);
+        );
 
         if self.show_modal {
             // Fix: Get the current theme value without creating a temporary reference

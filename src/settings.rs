@@ -1,74 +1,75 @@
+use iced::Theme;
 use serde::{Deserialize, Serialize};
-use std::fs::{self, File};
-use std::io::{self, Read, Write};
+use std::fs;
 use std::path::PathBuf;
 
-/// Enum representing the available themes
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Appearance {
-    Dark,
-    Light,
-    System,
-}
-
-impl Default for Appearance {
-    fn default() -> Self {
-        Appearance::System
-    }
-}
-
-/// Struct to manage application settings
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
-    pub appearance: Appearance,
+    // Store the theme name as a string
+    theme_name: String,
+    // ... any other settings
 }
 
 impl Settings {
-    /// Loads settings from the settings file
-    pub fn load() -> Self {
-        let path = Self::settings_path();
-
-        if path.exists() {
-            let mut file = match File::open(&path) {
-                Ok(file) => file,
-                Err(err) => {
-                    eprintln!("Failed to open settings file: {}", err);
-                    return Self::default();
-                }
-            };
-
-            let mut contents = String::new();
-            if let Err(err) = file.read_to_string(&mut contents) {
-                eprintln!("Failed to read settings file: {}", err);
-                return Self::default();
-            }
-            serde_json::from_str(&contents).unwrap_or_default()
-        } else {
-            Self::default()
+    // Default settings with a built-in theme
+    pub fn default() -> Self {
+        Self {
+            theme_name: "Dark".to_string(), // Default theme name
+                                            // ... other default settings
         }
     }
 
-    /// Saves the current settings to a file
-    pub fn save(&self) -> io::Result<()> {
-        let path = Self::settings_path();
+    // Property to get the actual Theme
+    pub fn theme(&self) -> Theme {
+        // Find the theme by name in Theme::ALL, fallback to Dark
+        Theme::ALL
+            .iter()
+            .find(|t| t.to_string() == self.theme_name)
+            .cloned()
+            .unwrap_or_else(|| {
+                eprintln!("Theme '{}' not found, using Dark", self.theme_name);
+                Theme::Dark
+            })
+    }
 
-        // Ensure directory exists
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
+    // Method to set the theme
+    pub fn set_theme(&mut self, theme: Theme) {
+        self.theme_name = theme.to_string();
+    }
+
+    // Loads settings from storage
+    pub fn load() -> Self {
+        let path = Self::path();
+
+        match fs::read_to_string(&path) {
+            Ok(contents) => serde_json::from_str(&contents).unwrap_or_else(|err| {
+                eprintln!("Error parsing settings: {}", err);
+                Self::default()
+            }),
+            Err(_) => Self::default(),
+        }
+    }
+
+    // Saves settings to storage
+    pub fn save(&self) -> Result<(), String> {
+        let path = Self::path();
+
+        // Create directory if it doesn't exist
+        if let Some(dir) = path.parent() {
+            fs::create_dir_all(dir).map_err(|e| e.to_string())?;
         }
 
-        let json = serde_json::to_string_pretty(self)?;
-        let mut file = File::create(path)?;
-        file.write_all(json.as_bytes())?;
+        let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
+        fs::write(path, json).map_err(|e| e.to_string())?;
 
         Ok(())
     }
 
-    /// Returns the path to the settings file
-    fn settings_path() -> PathBuf {
-        let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        path.push(".dbug_desktop");
-        path.push("settings.json");
-        path
+    // Path to settings file
+    fn path() -> PathBuf {
+        dirs::config_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("dbug-desktop")
+            .join("settings.json")
     }
 }

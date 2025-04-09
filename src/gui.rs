@@ -1,17 +1,15 @@
 use iced::event::Event;
 use iced::keyboard::key;
-use iced::{keyboard, Length};
+use iced::{keyboard, Length, Theme};
 
 use crate::gui::Message::Server;
 use crate::server;
 use crate::server::ServerMessage;
-use crate::settings::{Appearance, Settings};
+use crate::settings::Settings;
 use crate::storage::Storage;
-use crate::theme::theme::{Mode, Theme};
-use crate::theme::theme_helpers;
 use iced::widget::{
-    self, button, center, column, container, horizontal_space, mouse_area, opaque, row, scrollable,
-    stack, svg, text, Scrollable,
+    self, button, center, column, container, horizontal_space, mouse_area, opaque, pick_list, row,
+    scrollable, stack, svg, text, Scrollable,
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 
@@ -19,6 +17,7 @@ use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 pub fn gui() -> iced::Result {
     iced::application("dbug desktop", App::update, App::view)
         .subscription(App::subscription)
+        .theme(App::theme)
         .run()
 }
 
@@ -27,7 +26,6 @@ struct App {
     show_modal: bool,
     settings: Settings,
     storage: Storage,
-    theme: Theme,
 }
 
 impl Default for App {
@@ -36,7 +34,6 @@ impl Default for App {
             show_modal: false,
             settings: Settings::load(),
             storage: Storage::new().expect("Failed to initialize storage"),
-            theme: Theme::default(),
         }
     }
 }
@@ -49,7 +46,7 @@ pub(crate) enum Message {
     HideModal,
     Event(Event),
     Server(ServerMessage),
-    AppearanceSelected(Appearance),
+    ThemeChanged(Theme),
 }
 
 impl App {
@@ -78,8 +75,8 @@ impl App {
                 self.hide_modal();
                 Task::none()
             }
-            Message::AppearanceSelected(appearance) => {
-                self.settings.appearance = appearance;
+            Message::ThemeChanged(theme) => {
+                self.settings.set_theme(theme);
                 if let Err(e) = self.settings.save() {
                     eprintln!("Failed to save settings: {}", e);
                 }
@@ -110,6 +107,11 @@ impl App {
         }
     }
 
+    /// Returns the current theme
+    fn theme(&self) -> Theme {
+        self.settings.theme()
+    }
+
     /// Renders the application view
     fn view(&self) -> Element<Message> {
         let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
@@ -119,7 +121,6 @@ impl App {
                 .iter()
                 .map(|(_, value)| {
                     container(row![text(format!("{}", value))].spacing(10))
-                        .style(move |_| theme_helpers::Subtle::container(&self.theme))
                         .padding(10)
                         .width(Fill)
                         .into()
@@ -128,19 +129,13 @@ impl App {
         )
         .spacing(10);
 
-        let scrollable_storage = scrollable(storage_rows)
-            .width(Fill)
-            .spacing(5)
-            .height(Fill)
-            .style(move |_, _| theme_helpers::Subtle::scrollbar(&self.theme));
+        let scrollable_storage = scrollable(storage_rows).width(Fill).spacing(5).height(Fill);
 
         let content = container(
             column![
                 row![
                     horizontal_space(),
-                    button(svg(handle).width(20).height(20))
-                        .on_press(Message::ShowModal)
-                        .style(move |_, _| theme_helpers::Subtle::button(&self.theme)),
+                    button(svg(handle).width(20).height(20)).on_press(Message::ShowModal),
                 ]
                 .height(Length::Shrink),
                 scrollable_storage,
@@ -150,25 +145,16 @@ impl App {
             ]
             .height(Fill),
         )
-        .padding(10)
-        .style(|_theme| container::Style {
-            background: Some(self.theme.bg.into()),
-            ..container::Style::default()
-        });
+        .padding(10);
 
         if self.show_modal {
+            // Fix: Get the current theme value without creating a temporary reference
+            let current_theme = self.theme();
+
             let theme_selection = container(
                 column![
                     text("Select Theme").size(24),
-                    row![
-                        button(text("Dark"))
-                            .on_press(Message::AppearanceSelected(Appearance::Dark)),
-                        button(text("Light"))
-                            .on_press(Message::AppearanceSelected(Appearance::Light)),
-                        button(text("System"))
-                            .on_press(Message::AppearanceSelected(Appearance::System)),
-                    ]
-                    .spacing(10)
+                    pick_list(Theme::ALL, Some(current_theme), Message::ThemeChanged).width(Fill)
                 ]
                 .spacing(20),
             )

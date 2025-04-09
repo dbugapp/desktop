@@ -1,6 +1,6 @@
 use iced::event::Event;
 use iced::keyboard::key;
-use iced::{keyboard, Border, Length, Theme};
+use iced::{keyboard, Length, Theme};
 
 use crate::gui::Message::Server;
 use crate::server;
@@ -8,8 +8,8 @@ use crate::server::ServerMessage;
 use crate::settings::Settings;
 use crate::storage::Storage;
 use iced::widget::{
-    self, button, center, column, container, horizontal_space, mouse_area, opaque, pick_list, row,
-    scrollable, stack, svg, text, Scrollable,
+    self, button, center, column, container, horizontal_space, mouse_area, opaque, radio, row,
+    scrollable, stack, svg, text,
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 
@@ -46,8 +46,12 @@ pub(crate) enum Message {
     HideModal,
     Event(Event),
     Server(ServerMessage),
-    ThemeChanged(Theme),
+    ThemeChanged(usize),
 }
+
+/// A wrapper to use indices with radio buttons
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ThemeIndex(usize);
 
 impl App {
     fn subscription(&self) -> Subscription<Message> {
@@ -75,10 +79,12 @@ impl App {
                 self.hide_modal();
                 Task::none()
             }
-            Message::ThemeChanged(theme) => {
-                self.settings.set_theme(theme);
-                if let Err(e) = self.settings.save() {
-                    eprintln!("Failed to save settings: {}", e);
+            Message::ThemeChanged(index) => {
+                if let Some(theme) = Theme::ALL.get(index).cloned() {
+                    self.settings.set_theme(theme);
+                    if let Err(e) = self.settings.save() {
+                        eprintln!("Failed to save settings: {}", e);
+                    }
                 }
                 self.hide_modal();
                 Task::none()
@@ -164,18 +170,38 @@ impl App {
         );
 
         if self.show_modal {
-            // Fix: Get the current theme value without creating a temporary reference
+            // Find the current theme index in Theme::ALL
             let current_theme = self.theme();
+            let current_index = Theme::ALL
+                .iter()
+                .position(|t| t.to_string() == current_theme.to_string())
+                .unwrap_or(0);
 
             let theme_selection = container(
                 column![
                     text("Select Theme").size(24),
-                    pick_list(Theme::ALL, Some(current_theme), Message::ThemeChanged).width(Fill)
+                    column(
+                        Theme::ALL
+                            .iter()
+                            .enumerate()
+                            .map(|(idx, theme)| {
+                                radio(
+                                    theme.to_string(),
+                                    idx,
+                                    Some(current_index),
+                                    Message::ThemeChanged,
+                                )
+                                .spacing(10)
+                                .into()
+                            })
+                            .collect::<Vec<Element<Message>>>()
+                    )
+                    .spacing(10)
                 ]
                 .spacing(20),
             )
             .width(300)
-            .padding(10)
+            .padding(20)
             .style(container::rounded_box);
 
             modal(content, theme_selection, Message::HideModal)

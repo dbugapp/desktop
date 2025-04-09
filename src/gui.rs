@@ -191,6 +191,12 @@ impl App {
                                     Some(current_index),
                                     Message::ThemeChanged,
                                 )
+                                .style(|_, status| radio::Style {
+                                    border_color: theme.extended_palette().background.strong.color,
+                                    // background: theme.palette().background.into(),
+                                    text_color: theme.palette().text.into(),
+                                    ..radio::default(theme, status)
+                                })
                                 .spacing(10)
                                 .into()
                             })

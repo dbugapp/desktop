@@ -1,6 +1,6 @@
 use super::theme::Theme;
 use iced::widget::{button, container, scrollable};
-use iced::{Background, Color};
+use iced::Background;
 
 pub struct Subtle {}
 
@@ -12,12 +12,35 @@ impl Subtle {
             radius: 10.into(),
         }
     }
+    pub fn border_small(app_theme: &Theme) -> iced_core::Border {
+        iced::Border {
+            color: app_theme.border_accented,
+            width: 1.0,
+            radius: 5.into(),
+        }
+    }
+
+    /*
+    pub fn danger(theme: &Theme, status: Status) -> Style {
+        let palette = theme.extended_palette();
+        let base = styled(palette.danger.base);
+
+        match status {
+            Status::Active | Status::Pressed => base,
+            Status::Hovered => Style {
+                background: Some(Background::Color(palette.danger.strong.color)),
+                ..base
+            },
+            Status::Disabled => disabled(base),
+        }
+    }
+    */
 
     pub fn button(app_theme: &Theme) -> button::Style {
         button::Style {
             background: Some(Background::Color(app_theme.bg_elevated)),
             text_color: app_theme.text,
-            border: Self::border(app_theme),
+            border: Self::border_small(app_theme),
             ..button::Style::default()
         }
     }

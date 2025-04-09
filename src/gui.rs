@@ -17,7 +17,7 @@ use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
-    iced::application("Modal - Iced", App::update, App::view)
+    iced::application("dbug desktop", App::update, App::view)
         .subscription(App::subscription)
         .run()
 }
@@ -126,8 +126,7 @@ impl App {
                 })
                 .collect::<Vec<_>>(),
         )
-        .spacing(10)
-        .padding(10);
+        .spacing(10);
 
         let scrollable_storage = scrollable(storage_rows)
             .width(Fill)

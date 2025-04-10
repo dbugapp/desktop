@@ -8,9 +8,7 @@ use crate::server;
 use crate::server::ServerMessage;
 use crate::settings::Settings;
 use crate::storage::Storage;
-use iced::widget::{
-    self, button, column, container, horizontal_space, radio, row, scrollable, svg, text,
-};
+use iced::widget::{self, button, column, container, horizontal_space, row, svg};
 use iced::{Bottom, Element, Fill, Subscription, Task};
 
 /// Initializes and runs the GUI application
@@ -82,6 +80,7 @@ impl App {
                         eprintln!("Failed to save settings: {}", e);
                     }
                 }
+                self.hide_modal();
                 Task::none()
             }
             Message::Event(event) => match event {
@@ -121,28 +120,9 @@ impl App {
             color: theme.palette().text.into(),
             ..svg::Style::default()
         });
-        let storage_rows = column(
-            self.storage
-                .get_all()
-                .iter()
-                .map(|(_, value)| {
-                    container(row![text(format!("{}", value))])
-                        .padding(10)
-                        .width(Fill)
-                        .style(|theme: &Theme| {
-                            let palette = theme.extended_palette();
-                            container::Style {
-                                background: Some(palette.background.weak.color.into()),
-                                border: iced_core::border::rounded(5),
-                                ..container::Style::default()
-                            }
-                        })
-                        .into()
-                })
-                .collect::<Vec<_>>(),
-        )
-        .spacing(10)
-        .padding(10);
+
+        // Use the payloads component
+        let payloads = components::payload_list(&self.storage);
 
         let content = container(
             column![
@@ -154,7 +134,7 @@ impl App {
                 ]
                 .padding(10) // Add padding to the entire row
                 .height(Length::Shrink),
-                scrollable(storage_rows).width(Fill).spacing(0).height(Fill),
+                payloads,
                 row![horizontal_space()]
                     .align_y(Bottom)
                     .height(Length::Shrink),

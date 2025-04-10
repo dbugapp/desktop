@@ -24,6 +24,7 @@ struct App {
     show_modal: bool,
     settings: Settings,
     storage: Storage,
+    expanded_payload_id: Option<String>, // Track which payload is currently expanded
 }
 
 impl Default for App {
@@ -32,6 +33,7 @@ impl Default for App {
             show_modal: false,
             settings: Settings::load(),
             storage: Storage::new().expect("Failed to initialize storage"),
+            expanded_payload_id: None,
         }
     }
 }
@@ -45,6 +47,7 @@ pub(crate) enum Message {
     Event(Event),
     Server(ServerMessage),
     ThemeChanged(usize),
+    TogglePayload(String), // Toggle expansion of a payload by its ID
 }
 
 impl App {
@@ -79,6 +82,16 @@ impl App {
                     if let Err(e) = self.settings.save() {
                         eprintln!("Failed to save settings: {}", e);
                     }
+                }
+                Task::none()
+            }
+            Message::TogglePayload(id) => {
+                // If this is the currently expanded payload, collapse it
+                if self.expanded_payload_id.as_ref() == Some(&id) {
+                    self.expanded_payload_id = None;
+                } else {
+                    // Otherwise, expand this payload and collapse any other
+                    self.expanded_payload_id = Some(id);
                 }
                 Task::none()
             }
@@ -120,8 +133,8 @@ impl App {
             ..svg::Style::default()
         });
 
-        // Use the payloads component
-        let payloads = components::payload_list(&self.storage);
+        // Use the payloads component with expanded ID
+        let payloads = components::payload_list(&self.storage, self.expanded_payload_id.as_ref());
 
         let content = container(
             column![

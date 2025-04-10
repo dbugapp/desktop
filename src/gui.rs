@@ -82,7 +82,7 @@ impl App {
                         eprintln!("Failed to save settings: {}", e);
                     }
                 }
-                self.hide_modal();
+                // self.hide_modal();
                 Task::none()
             }
             Message::Event(event) => match event {
@@ -145,8 +145,6 @@ impl App {
         .spacing(10)
         .padding(10);
 
-        let scrollable_storage = scrollable(storage_rows).width(Fill).spacing(0).height(Fill);
-
         let content = container(
             column![
                 row![
@@ -157,7 +155,7 @@ impl App {
                 ]
                 .padding(10) // Add padding to the entire row
                 .height(Length::Shrink),
-                scrollable_storage,
+                scrollable(storage_rows).width(Fill).spacing(0).height(Fill),
                 row![horizontal_space()]
                     .align_y(Bottom)
                     .height(Length::Shrink),
@@ -167,56 +165,63 @@ impl App {
 
         if self.show_modal {
             // Find the current theme index in Theme::ALL
-            let current_theme = self.theme();
             let current_index = Theme::ALL
                 .iter()
-                .position(|t| t.to_string() == current_theme.to_string())
+                .position(|t| t.to_string() == self.theme().to_string())
                 .unwrap_or(0);
 
             let theme_selection = container(
                 column![
-                    text("Select Theme").size(24),
-                    column(
-                        Theme::ALL
-                            .iter()
-                            .enumerate()
-                            .map(|(idx, theme)| {
-                                container(
-                                    radio(
-                                        theme.to_string(),
-                                        idx,
-                                        Some(current_index),
-                                        Message::ThemeChanged,
+                    text("Select Theme").size(14).style(|_theme| {
+                        text::Style {
+                            color: self.theme().palette().text.into(),
+                            ..text::Style::default()
+                        }
+                    }),
+                    scrollable(
+                        column(
+                            Theme::ALL
+                                .iter()
+                                .enumerate()
+                                .map(|(idx, theme)| {
+                                    container(
+                                        radio(
+                                            theme.to_string(),
+                                            idx,
+                                            Some(current_index),
+                                            Message::ThemeChanged,
+                                        )
+                                        .style(|_, status| radio::Style {
+                                            border_color: theme
+                                                .extended_palette()
+                                                .background
+                                                .strong
+                                                .color,
+                                            text_color: theme.palette().text.into(),
+                                            ..radio::default(theme, status)
+                                        })
+                                        .spacing(10),
                                     )
-                                    .style(|_, status| radio::Style {
-                                        border_color: theme
-                                            .extended_palette()
-                                            .background
-                                            .strong
-                                            .color,
-                                        text_color: theme.palette().text.into(),
-                                        ..radio::default(theme, status)
+                                    .width(Fill)
+                                    .padding(10)
+                                    .style(move |_| container::Style {
+                                        background: Some(
+                                            theme.extended_palette().background.weak.color.into(),
+                                        ),
+                                        ..container::Style::default()
                                     })
-                                    .spacing(10),
-                                )
-                                .width(Fill)
-                                .padding(10)
-                                .style(move |_| container::Style {
-                                    background: Some(
-                                        theme.extended_palette().background.weak.color.into(),
-                                    ),
-                                    ..container::Style::default()
+                                    .into()
                                 })
-                                .into()
-                            })
-                            .collect::<Vec<Element<Message>>>()
+                                .collect::<Vec<Element<Message>>>()
+                        )
+                        .spacing(10)
                     )
-                    .spacing(10)
                 ]
                 .spacing(20),
             )
-            .width(300)
-            .padding(20)
+            .width(360)
+            .height(400)
+            .padding(10)
             .style(|_| container::Style {
                 background: Some(
                     Color {

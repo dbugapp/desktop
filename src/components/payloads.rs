@@ -5,7 +5,7 @@ use iced::{Element, Fill, Theme};
 
 /// Creates a scrollable display of all received JSON payloads
 pub fn payload_list<'a>(storage: &Storage) -> Element<'a, Message> {
-    let storage_rows = column(
+    let payload_rows = column(
         storage
             .get_all()
             .iter()
@@ -28,7 +28,7 @@ pub fn payload_list<'a>(storage: &Storage) -> Element<'a, Message> {
     .spacing(10)
     .padding(10);
 
-    scrollable(storage_rows)
+    scrollable(payload_rows)
         .width(Fill)
         .spacing(0)
         .height(Fill)

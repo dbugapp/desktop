@@ -80,7 +80,6 @@ impl App {
                         eprintln!("Failed to save settings: {}", e);
                     }
                 }
-                self.hide_modal();
                 Task::none()
             }
             Message::Event(event) => match event {

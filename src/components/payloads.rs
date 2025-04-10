@@ -37,7 +37,7 @@ pub fn payload_list<'a>(storage: &Storage, expanded_id: Option<&String>) -> Elem
                         .into()
                 } else {
                     // For non-expanded items, use a button with secondary styling
-                    let content = text(format_compact_json(value));
+                    let content = text(format!("{}", value));
 
                     button(container(content).width(Fill))
                         .width(Fill)
@@ -58,49 +58,4 @@ pub fn payload_list<'a>(storage: &Storage, expanded_id: Option<&String>) -> Elem
     .width(Fill)
     .height(Fill)
     .into()
-}
-
-/// Format JSON for compact display in collapsed view
-fn format_compact_json(value: &Value) -> String {
-    match value {
-        Value::Object(map) => {
-            let preview_fields: Vec<String> = map
-                .iter()
-                .take(3) // Take first few fields for preview
-                .map(|(k, v)| format!("{}: {}", k, format_brief_value(v)))
-                .collect();
-
-            let suffix = if map.len() > 3 { "..." } else { "" };
-            format!("{{ {} {}}}", preview_fields.join(", "), suffix)
-        }
-        Value::Array(arr) => {
-            let len = arr.len();
-            if len == 0 {
-                "[]".to_string()
-            } else if len == 1 {
-                format!("[{}]", format_brief_value(&arr[0]))
-            } else {
-                format!("[{} items]", len)
-            }
-        }
-        _ => value.to_string(),
-    }
-}
-
-/// Format a JSON value briefly for the preview
-fn format_brief_value(value: &Value) -> String {
-    match value {
-        Value::String(s) => {
-            if s.len() > 15 {
-                format!("\"{}...\"", &s[0..12])
-            } else {
-                format!("\"{}\"", s)
-            }
-        }
-        Value::Object(_) => "{...}".to_string(),
-        Value::Array(arr) => format!("[{} items]", arr.len()),
-        Value::Number(n) => n.to_string(),
-        Value::Bool(b) => b.to_string(),
-        Value::Null => "null".to_string(),
-    }
 }

@@ -1,22 +1,23 @@
 use iced::event::Event;
 use iced::keyboard::key;
-use iced::{keyboard, Length};
+use iced::{keyboard, Length, Theme};
 
 use crate::gui::Message::Server;
 use crate::server;
 use crate::server::ServerMessage;
-use crate::settings::{Settings, Theme};
+use crate::settings::Settings;
 use crate::storage::Storage;
 use iced::widget::{
-    self, button, center, column, container, horizontal_space, mouse_area, opaque, row, scrollable,
-    stack, svg, text,
+    self, button, center, column, container, horizontal_space, mouse_area, opaque, radio, row,
+    scrollable, stack, svg, text,
 };
 use iced::{Bottom, Color, Element, Fill, Subscription, Task};
 
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
-    iced::application("Modal - Iced", App::update, App::view)
+    iced::application("dbug desktop", App::update, App::view)
         .subscription(App::subscription)
+        .theme(App::theme)
         .run()
 }
 
@@ -43,9 +44,9 @@ impl Default for App {
 pub(crate) enum Message {
     ShowModal,
     HideModal,
-    ThemeSelected(Theme),
     Event(Event),
     Server(ServerMessage),
+    ThemeChanged(usize),
 }
 
 impl App {
@@ -74,12 +75,13 @@ impl App {
                 self.hide_modal();
                 Task::none()
             }
-            Message::ThemeSelected(theme) => {
-                self.settings.theme = theme;
-                if let Err(e) = self.settings.save() {
-                    eprintln!("Failed to save settings: {}", e);
+            Message::ThemeChanged(index) => {
+                if let Some(theme) = Theme::ALL.get(index).cloned() {
+                    self.settings.set_theme(theme);
+                    if let Err(e) = self.settings.save() {
+                        eprintln!("Failed to save settings: {}", e);
+                    }
                 }
-                self.hide_modal();
                 Task::none()
             }
             Message::Event(event) => match event {
@@ -106,57 +108,138 @@ impl App {
         }
     }
 
+    /// Returns the current theme
+    fn theme(&self) -> Theme {
+        self.settings.theme()
+    }
+
     /// Renders the application view
     fn view(&self) -> Element<Message> {
         let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
+
+        let svg_widget = svg(handle).style(|theme: &Theme, _| svg::Style {
+            color: theme.palette().text.into(),
+            ..svg::Style::default()
+        });
         let storage_rows = column(
             self.storage
                 .get_all()
                 .iter()
                 .map(|(_, value)| {
-                    container(row![text(format!("{}", value))].spacing(10))
-                        .style(container::rounded_box)
+                    container(row![text(format!("{}", value))])
                         .padding(10)
                         .width(Fill)
+                        .style(|theme: &Theme| {
+                            let palette = theme.extended_palette();
+                            container::Style {
+                                background: Some(palette.background.weak.color.into()),
+                                border: iced_core::border::rounded(5),
+                                ..container::Style::default()
+                            }
+                        })
                         .into()
                 })
                 .collect::<Vec<_>>(),
         )
         .spacing(10)
         .padding(10);
-        let scrollable_storage = scrollable(storage_rows).width(Fill).height(Fill);
+
         let content = container(
             column![
                 row![
                     horizontal_space(),
-                    button(svg(handle).width(20).height(20)).on_press(Message::ShowModal)
+                    button(svg_widget.width(20).height(20))
+                        .style(button::secondary)
+                        .on_press(Message::ShowModal)
                 ]
+                .padding(10) // Add padding to the entire row
                 .height(Length::Shrink),
-                scrollable_storage,
+                scrollable(storage_rows).width(Fill).spacing(0).height(Fill),
                 row![horizontal_space()]
                     .align_y(Bottom)
                     .height(Length::Shrink),
             ]
             .height(Fill),
-        )
-        .padding(10);
+        );
 
         if self.show_modal {
+            // Find the current theme index in Theme::ALL
+            let current_index = Theme::ALL
+                .iter()
+                .position(|t| t.to_string() == self.theme().to_string())
+                .unwrap_or(0);
+
             let theme_selection = container(
                 column![
-                    text("Select Theme").size(24),
-                    row![
-                        button(text("Dark")).on_press(Message::ThemeSelected(Theme::Dark)),
-                        button(text("Light")).on_press(Message::ThemeSelected(Theme::Light)),
-                        button(text("System")).on_press(Message::ThemeSelected(Theme::System)),
-                    ]
-                    .spacing(10)
+                    text("Select Theme").size(18).style(|_theme| {
+                        text::Style {
+                            color: self.theme().palette().text.into(),
+                        }
+                    }),
+                    scrollable(
+                        container(
+                            column(
+                                Theme::ALL
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(idx, theme)| {
+                                        container(
+                                            radio(
+                                                theme.to_string(),
+                                                idx,
+                                                Some(current_index),
+                                                Message::ThemeChanged,
+                                            )
+                                            .width(Fill)
+                                            .style(|_, status| radio::Style {
+                                                border_color: theme
+                                                    .extended_palette()
+                                                    .background
+                                                    .strong
+                                                    .color,
+                                                text_color: theme.palette().text.into(),
+                                                ..radio::default(theme, status)
+                                            })
+                                            .spacing(10),
+                                        )
+                                        .width(Fill)
+                                        .padding(10)
+                                        .style(move |_| container::Style {
+                                            background: Some(
+                                                theme
+                                                    .extended_palette()
+                                                    .background
+                                                    .weak
+                                                    .color
+                                                    .into(),
+                                            ),
+                                            border: iced_core::border::rounded(5),
+                                            ..container::Style::default()
+                                        })
+                                        .into()
+                                    })
+                                    .collect::<Vec<Element<Message>>>()
+                            )
+                            .spacing(10)
+                        )
+                        .padding(iced_core::Padding {
+                            right: 15.0,
+                            top: 5.0,
+                            bottom: 5.0,
+                            ..iced_core::Padding::default()
+                        })
+                    )
                 ]
-                .spacing(20),
+                .spacing(10),
             )
-            .width(300)
+            .width(360)
+            .height(400)
             .padding(10)
-            .style(container::rounded_box);
+            .style(|theme| container::Style {
+                background: Some(theme.extended_palette().background.base.color.into()),
+                border: iced_core::border::rounded(5),
+                ..container::Style::default()
+            });
 
             modal(content, theme_selection, Message::HideModal)
         } else {

@@ -82,7 +82,6 @@ impl App {
                         eprintln!("Failed to save settings: {}", e);
                     }
                 }
-                // self.hide_modal();
                 Task::none()
             }
             Message::Event(event) => match event {
@@ -172,64 +171,71 @@ impl App {
 
             let theme_selection = container(
                 column![
-                    text("Select Theme").size(14).style(|_theme| {
+                    text("Select Theme").size(18).style(|_theme| {
                         text::Style {
                             color: self.theme().palette().text.into(),
-                            ..text::Style::default()
                         }
                     }),
                     scrollable(
-                        column(
-                            Theme::ALL
-                                .iter()
-                                .enumerate()
-                                .map(|(idx, theme)| {
-                                    container(
-                                        radio(
-                                            theme.to_string(),
-                                            idx,
-                                            Some(current_index),
-                                            Message::ThemeChanged,
+                        container(
+                            column(
+                                Theme::ALL
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(idx, theme)| {
+                                        container(
+                                            radio(
+                                                theme.to_string(),
+                                                idx,
+                                                Some(current_index),
+                                                Message::ThemeChanged,
+                                            )
+                                            .width(Fill)
+                                            .style(|_, status| radio::Style {
+                                                border_color: theme
+                                                    .extended_palette()
+                                                    .background
+                                                    .strong
+                                                    .color,
+                                                text_color: theme.palette().text.into(),
+                                                ..radio::default(theme, status)
+                                            })
+                                            .spacing(10),
                                         )
-                                        .style(|_, status| radio::Style {
-                                            border_color: theme
-                                                .extended_palette()
-                                                .background
-                                                .strong
-                                                .color,
-                                            text_color: theme.palette().text.into(),
-                                            ..radio::default(theme, status)
+                                        .width(Fill)
+                                        .padding(10)
+                                        .style(move |_| container::Style {
+                                            background: Some(
+                                                theme
+                                                    .extended_palette()
+                                                    .background
+                                                    .weak
+                                                    .color
+                                                    .into(),
+                                            ),
+                                            border: iced_core::border::rounded(5),
+                                            ..container::Style::default()
                                         })
-                                        .spacing(10),
-                                    )
-                                    .width(Fill)
-                                    .padding(10)
-                                    .style(move |_| container::Style {
-                                        background: Some(
-                                            theme.extended_palette().background.weak.color.into(),
-                                        ),
-                                        ..container::Style::default()
+                                        .into()
                                     })
-                                    .into()
-                                })
-                                .collect::<Vec<Element<Message>>>()
+                                    .collect::<Vec<Element<Message>>>()
+                            )
+                            .spacing(10)
                         )
-                        .spacing(10)
+                        .padding(iced_core::Padding {
+                            right: 15.0,
+                            ..iced_core::Padding::default()
+                        })
                     )
                 ]
-                .spacing(20),
+                .spacing(10),
             )
             .width(360)
             .height(400)
             .padding(10)
-            .style(|_| container::Style {
-                background: Some(
-                    Color {
-                        a: 0.8,
-                        ..Color::BLACK
-                    }
-                    .into(),
-                ),
+            .style(|theme| container::Style {
+                background: Some(theme.extended_palette().background.base.color.into()),
+                border: iced_core::border::rounded(5),
                 ..container::Style::default()
             });
 

@@ -21,21 +21,23 @@ pub fn payload_list<'a>(storage: &Storage, expanded_id: Option<&String>) -> Elem
                     };
 
                     // For expanded items, use a container with similar styling but not a button
-                    container(column![text(pretty_json).size(14)].spacing(5).width(Fill))
+                    container(column![text(pretty_json)].spacing(5).width(Fill))
                         .padding(10)
                         .width(Fill)
                         .style(|theme: &Theme| {
                             let palette = theme.extended_palette();
                             container::Style {
-                                background: Some(palette.background.weak.color.into()),
-                                border: iced_core::border::rounded(5),
+                                background: Some(palette.background.base.color.into()),
+                                border: iced_core::border::rounded(5)
+                                    .color(palette.secondary.base.color)
+                                    .width(1.0),
                                 ..container::Style::default()
                             }
                         })
                         .into()
                 } else {
                     // For non-expanded items, use a button with secondary styling
-                    let content = text(format_compact_json(value)).size(14);
+                    let content = text(format_compact_json(value));
 
                     button(container(content).width(Fill))
                         .width(Fill)

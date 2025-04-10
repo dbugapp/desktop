@@ -49,10 +49,6 @@ pub(crate) enum Message {
     ThemeChanged(usize),
 }
 
-/// A wrapper to use indices with radio buttons
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct ThemeIndex(usize);
-
 impl App {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::run(server::listen).map(Server)
@@ -185,19 +181,32 @@ impl App {
                             .iter()
                             .enumerate()
                             .map(|(idx, theme)| {
-                                radio(
-                                    theme.to_string(),
-                                    idx,
-                                    Some(current_index),
-                                    Message::ThemeChanged,
+                                container(
+                                    radio(
+                                        theme.to_string(),
+                                        idx,
+                                        Some(current_index),
+                                        Message::ThemeChanged,
+                                    )
+                                    .style(|_, status| radio::Style {
+                                        border_color: theme
+                                            .extended_palette()
+                                            .background
+                                            .strong
+                                            .color,
+                                        text_color: theme.palette().text.into(),
+                                        ..radio::default(theme, status)
+                                    })
+                                    .spacing(10),
                                 )
-                                .style(|_, status| radio::Style {
-                                    border_color: theme.extended_palette().background.strong.color,
-                                    // background: theme.palette().background.into(),
-                                    text_color: theme.palette().text.into(),
-                                    ..radio::default(theme, status)
+                                .width(Fill)
+                                .padding(10)
+                                .style(move |_| container::Style {
+                                    background: Some(
+                                        theme.extended_palette().background.weak.color.into(),
+                                    ),
+                                    ..container::Style::default()
                                 })
-                                .spacing(10)
                                 .into()
                             })
                             .collect::<Vec<Element<Message>>>()
@@ -208,7 +217,16 @@ impl App {
             )
             .width(300)
             .padding(20)
-            .style(container::rounded_box);
+            .style(|_| container::Style {
+                background: Some(
+                    Color {
+                        a: 0.8,
+                        ..Color::BLACK
+                    }
+                    .into(),
+                ),
+                ..container::Style::default()
+            });
 
             modal(content, theme_selection, Message::HideModal)
         } else {

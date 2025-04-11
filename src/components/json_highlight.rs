@@ -16,8 +16,8 @@ fn color_for_token(token: &str, is_key: bool, in_string: bool, theme: &Theme) ->
             "[" | "]" => palette.background.weak.color, // Brackets color
             ":" => palette.secondary.base.color,        // Colon color
             "," => palette.background.strong.color,     // Comma color
-            _ if token.chars().all(|c| c.is_numeric() || c == '-') => {
-                palette.primary.base.color // Number color
+            _ if token.trim().parse::<f64>().is_ok() => {
+                palette.success.weak.color // Numeric value color (integers, decimals, scientific notation)
             }
             _ => palette.primary.weak.color, // Default color
         }

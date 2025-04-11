@@ -5,7 +5,11 @@ use iced::widget::{button, column, container, scrollable, text};
 use iced::{Element, Fill, Theme};
 
 /// Creates a scrollable display of all received JSON payloads
-pub fn payload_list<'a>(storage: &Storage, expanded_id: Option<&String>) -> Element<'a, Message> {
+pub fn payload_list<'a>(
+    storage: &Storage,
+    expanded_id: Option<&String>,
+    theme: &Theme,
+) -> Element<'a, Message> {
     let storage_rows = column(
         storage
             .get_all()
@@ -20,8 +24,8 @@ pub fn payload_list<'a>(storage: &Storage, expanded_id: Option<&String>) -> Elem
                         Err(_) => format!("{:?}", value),
                     };
 
-                    // Use syntax highlighting for JSON
-                    let highlighted_json = highlight_json(&pretty_json);
+                    // Use syntax highlighting for JSON with the current theme
+                    let highlighted_json = highlight_json(&pretty_json, theme);
 
                     // For expanded items, use a container with similar styling but not a button
                     container(column![highlighted_json].spacing(5).width(Fill))

@@ -1,43 +1,52 @@
 use crate::gui::Message;
 use iced::widget::{column, row, text};
-use iced::{Color, Element};
+use iced::{Color, Element, Theme};
 use serde_json::Value;
 
-fn color_for_json(value: &Value) -> Color {
+fn color_for_json(value: &Value, theme: &Theme) -> Color {
+    let palette = theme.extended_palette();
     match value {
-        Value::String(_) => Color::from_rgb(0.8, 0.6, 0.2),
-        Value::Number(_) => Color::from_rgb(0.2, 0.6, 0.8),
-        Value::Bool(_) => Color::from_rgb(0.8, 0.3, 0.3),
-        Value::Null => Color::from_rgb(0.5, 0.5, 0.5),
-        _ => Color::WHITE,
+        Value::String(_) => palette.primary.base.color,
+        Value::Number(_) => palette.secondary.base.color,
+        Value::Bool(_) => palette.primary.strong.color,
+        Value::Null => palette.secondary.weak.color,
+        _ => palette.primary.weak.color,
     }
 }
 
-fn render_json(value: &Value) -> Element<'static, Message> {
+fn render_json(value: &Value, theme: &Theme) -> Element<'static, Message> {
+    let palette = theme.extended_palette();
     match value {
-        Value::Object(map) => column(
-            map.iter()
-                .map(|(k, v)| {
-                    let key = k.clone();
-                    row![
-                        text(format!("\"{}\": ", key)).style(move |_| iced::widget::text::Style {
-                            color: Some(Color::from_rgb(0.8, 0.6, 0.2))
-                        }),
-                        render_json(v)
-                    ]
-                    .spacing(5)
-                    .into()
-                })
+        Value::Object(map) => {
+            let primary_color = palette.primary.base.color;
+            column(
+                map.iter()
+                    .map(|(k, v)| {
+                        let key = k.clone();
+                        let color = primary_color;
+                        row![
+                            text(format!("\"{}\": ", key))
+                                .style(move |_| iced::widget::text::Style { color: Some(color) }),
+                            render_json(v, theme)
+                        ]
+                        .spacing(5)
+                        .into()
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .spacing(5)
+            .into()
+        }
+        Value::Array(arr) => column(
+            arr.iter()
+                .map(|v| render_json(v, theme))
                 .collect::<Vec<_>>(),
         )
         .spacing(5)
         .into(),
-        Value::Array(arr) => column(arr.iter().map(render_json).collect::<Vec<_>>())
-            .spacing(5)
-            .into(),
         _ => {
             let val_str = value.to_string();
-            let color = color_for_json(value);
+            let color = color_for_json(value, theme);
             text(val_str)
                 .style(move |_| iced::widget::text::Style { color: Some(color) })
                 .into()
@@ -45,7 +54,7 @@ fn render_json(value: &Value) -> Element<'static, Message> {
     }
 }
 
-pub fn highlight_json(json: &str) -> Element<'static, Message> {
+pub fn highlight_json(json: &str, theme: &Theme) -> Element<'static, Message> {
     let parsed_json: Value = serde_json::from_str(json).unwrap_or(Value::Null);
-    render_json(&parsed_json)
+    render_json(&parsed_json, theme)
 }

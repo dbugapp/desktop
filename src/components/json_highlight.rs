@@ -21,21 +21,21 @@ pub fn highlight_json(json: &str, theme: &Theme) -> Element<'static, Message> {
             .into_iter()
             .map(|line| {
                 let tokens = line
-                    .split_inclusive(|c: char| c.is_whitespace() || ['{', '}', '[', ']', ':', ','].contains(&c))
+                    .split_inclusive(|c: char| {
+                        c.is_whitespace() || ['{', '}', '[', ']', ':', ','].contains(&c)
+                    })
                     .map(|token| token.to_owned())
                     .collect::<Vec<_>>();
 
-                row(
-                    tokens
-                        .into_iter()
-                        .map(|token| {
-                            let color = color_for_token(token.trim(), theme);
-                            text(token)
-                                .style(move |_| iced::widget::text::Style { color: Some(color) })
-                                .into()
-                        })
-                        .collect::<Vec<Element<'_, Message>>>(),
-                )
+                row(tokens
+                    .into_iter()
+                    .map(|token| {
+                        let color = color_for_token(token.trim(), theme);
+                        text(token)
+                            .style(move |_| iced::widget::text::Style { color: Some(color) })
+                            .into()
+                    })
+                    .collect::<Vec<Element<'_, Message>>>())
                 .into()
             })
             .collect::<Vec<_>>(),

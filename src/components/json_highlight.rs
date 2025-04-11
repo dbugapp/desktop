@@ -16,6 +16,8 @@ fn color_for_json(value: &Value, theme: &Theme) -> Color {
 
 fn render_json(value: &Value, theme: &Theme) -> Element<'static, Message> {
     let palette = theme.extended_palette();
+    let structural_color = palette.background.strong.color;
+
     match value {
         Value::Object(map) => {
             let primary_color = palette.primary.base.color;
@@ -25,9 +27,18 @@ fn render_json(value: &Value, theme: &Theme) -> Element<'static, Message> {
                         let key = k.clone();
                         let color = primary_color;
                         row![
-                            text(format!("\"{}\": ", key))
+                            text("{").style(move |_| iced::widget::text::Style {
+                                color: Some(structural_color)
+                            }),
+                            text(format!("\"{}\"", key))
                                 .style(move |_| iced::widget::text::Style { color: Some(color) }),
-                            render_json(v, theme)
+                            text(":").style(move |_| iced::widget::text::Style {
+                                color: Some(structural_color)
+                            }),
+                            render_json(v, theme),
+                            text("}").style(move |_| iced::widget::text::Style {
+                                color: Some(structural_color)
+                            }),
                         ]
                         .spacing(5)
                         .into()
@@ -39,7 +50,19 @@ fn render_json(value: &Value, theme: &Theme) -> Element<'static, Message> {
         }
         Value::Array(arr) => column(
             arr.iter()
-                .map(|v| render_json(v, theme))
+                .map(|v| {
+                    row![
+                        text("[").style(move |_| iced::widget::text::Style {
+                            color: Some(structural_color)
+                        }),
+                        render_json(v, theme),
+                        text("]").style(move |_| iced::widget::text::Style {
+                            color: Some(structural_color)
+                        }),
+                    ]
+                    .spacing(5)
+                    .into()
+                })
                 .collect::<Vec<_>>(),
         )
         .spacing(5)

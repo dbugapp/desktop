@@ -6,20 +6,20 @@ fn color_for_token(token: &str, is_key: bool, in_string: bool, theme: &Theme) ->
     let palette = theme.extended_palette();
     if in_string {
         if is_key {
-            palette.primary.base.color
+            palette.primary.base.color // Key color
         } else {
-            palette.secondary.base.color
+            palette.primary.strong.color // String value color
         }
     } else {
         match token {
-            "{" | "}" => palette.background.strong.color,
-            "[" | "]" => palette.background.strong.color,
-            ":" => palette.secondary.base.color,
-            "," => palette.background.strong.color,
+            "{" | "}" => palette.background.weak.color, // Curly braces color
+            "[" | "]" => palette.background.weak.color, // Brackets color
+            ":" => palette.secondary.base.color,        // Colon color
+            "," => palette.background.strong.color,     // Comma color
             _ if token.chars().all(|c| c.is_numeric() || c == '-') => {
-                palette.secondary.strong.color
+                palette.primary.base.color // Number color
             }
-            _ => palette.primary.weak.color,
+            _ => palette.primary.weak.color, // Default color
         }
     }
 }

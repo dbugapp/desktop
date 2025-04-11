@@ -2,7 +2,6 @@ use crate::gui::Message;
 use crate::storage::Storage;
 use iced::widget::{button, column, container, scrollable, text};
 use iced::{Element, Fill, Theme};
-use serde_json::Value;
 
 /// Creates a scrollable display of all received JSON payloads
 pub fn payload_list<'a>(storage: &Storage, expanded_id: Option<&String>) -> Element<'a, Message> {

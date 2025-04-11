@@ -1,3 +1,4 @@
+use crate::components::json_highlight::highlight_json;
 use crate::gui::Message;
 use crate::storage::Storage;
 use iced::widget::{button, column, container, scrollable, text};
@@ -19,8 +20,11 @@ pub fn payload_list<'a>(storage: &Storage, expanded_id: Option<&String>) -> Elem
                         Err(_) => format!("{:?}", value),
                     };
 
+                    // Use syntax highlighting for JSON
+                    let highlighted_json = highlight_json(&pretty_json);
+
                     // For expanded items, use a container with similar styling but not a button
-                    container(column![text(pretty_json)].spacing(5).width(Fill))
+                    container(column![highlighted_json].spacing(5).width(Fill))
                         .padding(10)
                         .width(Fill)
                         .style(|theme: &Theme| {

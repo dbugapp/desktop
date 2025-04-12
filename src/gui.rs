@@ -133,37 +133,43 @@ impl App {
 
     /// Renders the application view
     fn view(&self) -> Element<Message> {
-        let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
-
-        let svg_widget = svg(handle).style(|theme: &Theme, _| svg::Style {
+        let settings_svg = svg(svg::Handle::from_path(
+            "src/assets/icons/mdi--mixer-settings.svg",
+        ))
+        .style(|theme: &Theme, _| svg::Style {
             color: theme.palette().text.into(),
             ..svg::Style::default()
         });
 
-        // Use the payloads component with expanded ID
-        let payloads = components::payload_list(
-            &self.storage,
-            self.expanded_payload_id.as_ref(),
-            &self.theme(),
-        );
+        let remove_all_svg = svg(svg::Handle::from_path(
+            "src/assets/icons/mdi--close-box-multiple.svg",
+        ))
+        .style(|theme: &Theme, _| svg::Style {
+            color: theme.palette().text.into(),
+            ..svg::Style::default()
+        });
 
-        let clear_button = button("Clear")
-            .style(button::secondary)
-            .on_press(Message::ClearPayloads);
+        let button_size = 15;
 
         let content = container(
             column![
                 row![
                     horizontal_space(),
-                    clear_button,
-                    button(svg_widget.width(20).height(20))
+                    button(remove_all_svg.width(button_size).height(button_size))
+                        .style(button::secondary)
+                        .on_press(Message::ClearPayloads),
+                    button(settings_svg.width(button_size).height(button_size))
                         .style(button::secondary)
                         .on_press(Message::ShowModal),
                 ]
-                .padding(10) // Add padding to the entire row
+                .padding(10)
                 .spacing(10)
                 .height(Length::Shrink),
-                payloads,
+                components::payload_list(
+                    &self.storage,
+                    self.expanded_payload_id.as_ref(),
+                    &self.theme()
+                ),
                 row![horizontal_space()]
                     .align_y(Bottom)
                     .height(Length::Shrink),

@@ -2,16 +2,14 @@ use iced::event::Event;
 use iced::keyboard::key;
 use iced::{keyboard, Length, Theme};
 
+use crate::components;
 use crate::gui::Message::Server;
 use crate::server;
 use crate::server::ServerMessage;
 use crate::settings::Settings;
 use crate::storage::Storage;
-use iced::widget::{
-    self, button, center, column, container, horizontal_space, mouse_area, opaque, radio, row,
-    scrollable, stack, svg, text,
-};
-use iced::{Bottom, Color, Element, Fill, Subscription, Task};
+use iced::widget::{self, button, column, container, horizontal_space, row, svg};
+use iced::{Bottom, Element, Fill, Subscription, Task};
 
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
@@ -26,6 +24,7 @@ struct App {
     show_modal: bool,
     settings: Settings,
     storage: Storage,
+    expanded_payload_id: Option<String>, // Track which payload is currently expanded
 }
 
 impl Default for App {
@@ -34,6 +33,7 @@ impl Default for App {
             show_modal: false,
             settings: Settings::load(),
             storage: Storage::new().expect("Failed to initialize storage"),
+            expanded_payload_id: None,
         }
     }
 }
@@ -47,6 +47,7 @@ pub(crate) enum Message {
     Event(Event),
     Server(ServerMessage),
     ThemeChanged(usize),
+    TogglePayload(String), // Toggle expansion of a payload by its ID
 }
 
 impl App {
@@ -81,6 +82,16 @@ impl App {
                     if let Err(e) = self.settings.save() {
                         eprintln!("Failed to save settings: {}", e);
                     }
+                }
+                Task::none()
+            }
+            Message::TogglePayload(id) => {
+                // If this is the currently expanded payload, collapse it
+                if self.expanded_payload_id.as_ref() == Some(&id) {
+                    self.expanded_payload_id = None;
+                } else {
+                    // Otherwise, expand this payload and collapse any other
+                    self.expanded_payload_id = Some(id);
                 }
                 Task::none()
             }
@@ -121,28 +132,13 @@ impl App {
             color: theme.palette().text.into(),
             ..svg::Style::default()
         });
-        let storage_rows = column(
-            self.storage
-                .get_all()
-                .iter()
-                .map(|(_, value)| {
-                    container(row![text(format!("{}", value))])
-                        .padding(10)
-                        .width(Fill)
-                        .style(|theme: &Theme| {
-                            let palette = theme.extended_palette();
-                            container::Style {
-                                background: Some(palette.background.weak.color.into()),
-                                border: iced_core::border::rounded(5),
-                                ..container::Style::default()
-                            }
-                        })
-                        .into()
-                })
-                .collect::<Vec<_>>(),
-        )
-        .spacing(10)
-        .padding(10);
+
+        // Use the payloads component with expanded ID
+        let payloads = components::payload_list(
+            &self.storage,
+            self.expanded_payload_id.as_ref(),
+            &self.theme(),
+        );
 
         let content = container(
             column![
@@ -154,7 +150,7 @@ impl App {
                 ]
                 .padding(10) // Add padding to the entire row
                 .height(Length::Shrink),
-                scrollable(storage_rows).width(Fill).spacing(0).height(Fill),
+                payloads,
                 row![horizontal_space()]
                     .align_y(Bottom)
                     .height(Length::Shrink),
@@ -163,85 +159,13 @@ impl App {
         );
 
         if self.show_modal {
-            // Find the current theme index in Theme::ALL
-            let current_index = Theme::ALL
-                .iter()
-                .position(|t| t.to_string() == self.theme().to_string())
-                .unwrap_or(0);
+            // Get the current theme
+            let current_theme = self.theme();
 
-            let theme_selection = container(
-                column![
-                    text("Select Theme").size(18).style(|_theme| {
-                        text::Style {
-                            color: self.theme().palette().text.into(),
-                        }
-                    }),
-                    scrollable(
-                        container(
-                            column(
-                                Theme::ALL
-                                    .iter()
-                                    .enumerate()
-                                    .map(|(idx, theme)| {
-                                        container(
-                                            radio(
-                                                theme.to_string(),
-                                                idx,
-                                                Some(current_index),
-                                                Message::ThemeChanged,
-                                            )
-                                            .width(Fill)
-                                            .style(|_, status| radio::Style {
-                                                border_color: theme
-                                                    .extended_palette()
-                                                    .background
-                                                    .strong
-                                                    .color,
-                                                text_color: theme.palette().text.into(),
-                                                ..radio::default(theme, status)
-                                            })
-                                            .spacing(10),
-                                        )
-                                        .width(Fill)
-                                        .padding(10)
-                                        .style(move |_| container::Style {
-                                            background: Some(
-                                                theme
-                                                    .extended_palette()
-                                                    .background
-                                                    .weak
-                                                    .color
-                                                    .into(),
-                                            ),
-                                            border: iced_core::border::rounded(5),
-                                            ..container::Style::default()
-                                        })
-                                        .into()
-                                    })
-                                    .collect::<Vec<Element<Message>>>()
-                            )
-                            .spacing(10)
-                        )
-                        .padding(iced_core::Padding {
-                            right: 15.0,
-                            top: 5.0,
-                            bottom: 5.0,
-                            ..iced_core::Padding::default()
-                        })
-                    )
-                ]
-                .spacing(10),
-            )
-            .width(360)
-            .height(400)
-            .padding(10)
-            .style(|theme| container::Style {
-                background: Some(theme.extended_palette().background.base.color.into()),
-                border: iced_core::border::rounded(5),
-                ..container::Style::default()
-            });
+            // Use the settings modal component
+            let settings_content = components::settings_modal(current_theme);
 
-            modal(content, theme_selection, Message::HideModal)
+            components::modal(content, settings_content, Message::HideModal)
         } else {
             content.into()
         }
@@ -253,34 +177,4 @@ impl App {
     fn hide_modal(&mut self) {
         self.show_modal = false;
     }
-}
-
-/// Creates a modal dialog overlay
-fn modal<'a, Message>(
-    base: impl Into<Element<'a, Message>>,
-    content: impl Into<Element<'a, Message>>,
-    on_blur: Message,
-) -> Element<'a, Message>
-where
-    Message: Clone + 'a,
-{
-    stack![
-        base.into(),
-        opaque(
-            mouse_area(center(opaque(content)).style(|_theme| {
-                container::Style {
-                    background: Some(
-                        Color {
-                            a: 0.8,
-                            ..Color::BLACK
-                        }
-                        .into(),
-                    ),
-                    ..container::Style::default()
-                }
-            }))
-            .on_press(on_blur)
-        )
-    ]
-    .into()
 }

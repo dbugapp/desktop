@@ -48,6 +48,7 @@ pub(crate) enum Message {
     Server(ServerMessage),
     ThemeChanged(usize),
     TogglePayload(String), // Toggle expansion of a payload by its ID
+    ClearPayloads,         // Clear all payloads
 }
 
 impl App {
@@ -92,6 +93,12 @@ impl App {
                 } else {
                     // Otherwise, expand this payload and collapse any other
                     self.expanded_payload_id = Some(id);
+                }
+                Task::none()
+            }
+            Message::ClearPayloads => {
+                if let Err(e) = self.storage.delete_all() {
+                    eprintln!("Failed to clear payloads: {}", e);
                 }
                 Task::none()
             }
@@ -140,15 +147,21 @@ impl App {
             &self.theme(),
         );
 
+        let clear_button = button("Clear")
+            .style(button::secondary)
+            .on_press(Message::ClearPayloads);
+
         let content = container(
             column![
                 row![
                     horizontal_space(),
+                    clear_button,
                     button(svg_widget.width(20).height(20))
                         .style(button::secondary)
-                        .on_press(Message::ShowModal)
+                        .on_press(Message::ShowModal),
                 ]
                 .padding(10) // Add padding to the entire row
+                .spacing(10)
                 .height(Length::Shrink),
                 payloads,
                 row![horizontal_space()]

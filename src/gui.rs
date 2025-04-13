@@ -9,7 +9,7 @@ use crate::server;
 use crate::server::ServerMessage;
 use crate::settings::Settings;
 use crate::storage::Storage;
-use iced::widget::{self, button, column, container, horizontal_space, row, svg};
+use iced::widget::{self, button, column, container, horizontal_space, row, svg, text};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
 /// Initializes and runs the GUI application
@@ -181,23 +181,31 @@ impl App {
 
     /// Renders the application view
     fn view(&self) -> Element<Message> {
-        fn svg_style(theme: &Theme, _status: svg::Status) -> svg::Style {
+        fn svg_style_primary(theme: &Theme, _status: svg::Status) -> svg::Style {
             svg::Style {
-                color: theme.palette().text.into(),
+                color: theme.extended_palette().secondary.base.text.into(),
                 ..svg::Style::default()
             }
         }
-       let settings_svg = svg(svg::Handle::from_path(
-            "assets/icons/mdi--mixer-settings.svg",
-        ))
-        .style(svg_style)
+        fn svg_style_secondary(theme: &Theme, _status: svg::Status) -> svg::Style {
+            svg::Style {
+                color: theme.extended_palette().secondary.base.text.into(),
+                ..svg::Style::default()
+            }
+        }
+
+        let logo_svg = svg(svg::Handle::from_path("assets/icons/mdi--ladybug.svg"))
+        .style(svg_style_primary)
         .width(Fill)
         .height(Fill);
 
-        let remove_all_svg = svg(svg::Handle::from_path(
-            "assets/icons/mdi--close-box-multiple.svg",
-        ))
-        .style(svg_style)
+        let settings_svg = svg(svg::Handle::from_path( "assets/icons/mdi--mixer-settings.svg"))
+        .style(svg_style_secondary)
+        .width(Fill)
+        .height(Fill);
+
+        let remove_all_svg = svg(svg::Handle::from_path("assets/icons/mdi--close-box-multiple.svg"))
+        .style(svg_style_secondary)
         .width(Fill)
         .height(Fill);
 
@@ -206,6 +214,7 @@ impl App {
         let content = container(
             column![
                 row![
+                    button(logo_svg).width(button_size).height(button_size).padding(3.0),
                     horizontal_space(),
                     button(remove_all_svg)
                         .style(button::secondary)

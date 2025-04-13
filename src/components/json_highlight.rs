@@ -6,7 +6,7 @@ fn color_for_token(token: &str, is_key: bool, in_string: bool, theme: &Theme) ->
     let palette = theme.extended_palette();
     if in_string {
         if is_key {
-            palette.primary.base.color // Key color
+            palette.secondary.base.text // Key color
         } else {
             palette.primary.strong.color // String value color
         }

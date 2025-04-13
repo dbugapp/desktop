@@ -33,12 +33,14 @@ pub fn payload_list<'a>(
                         .width(Fill)
                         .style(|theme: &Theme| {
                             let palette = theme.extended_palette();
-                            let mut bg_color = palette.background.weak.color;
-                            bg_color.a = 0.3;
+                            let mut bg_color = palette.background.strong.color;
+                            bg_color.a = 0.01;
+                            let mut border_color = palette.background.strong.color;
+                            border_color.a = 0.05;
 
                             container::Style {
                                 background: Some(bg_color.into()),
-                                border: iced_core::border::rounded(5),
+                                border: iced_core::border::rounded(5).color(border_color).width(1.0),
                                 ..container::Style::default()
                             }
                         })
@@ -47,7 +49,7 @@ pub fn payload_list<'a>(
                     // For non-expanded items, use a button with secondary styling
                     let content = text(format!("{}", value)).height(22.0);
 
-                    button(container(content).width(Fill))
+                    button(container(content).width(Fill)).style(button::secondary)
                         .width(Fill)
                         .on_press(Message::TogglePayload(id.clone()))
                         .into()

@@ -1,13 +1,69 @@
-use iced::Theme;
+use crate::storage::Storage;
+use iced::{Point, Size, Theme};
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SerializablePoint {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl From<Point> for SerializablePoint {
+    fn from(point: Point) -> Self {
+        Self {
+            x: point.x,
+            y: point.y,
+        }
+    }
+}
+
+impl Into<Point> for SerializablePoint {
+    fn into(self) -> Point {
+        Point::new(self.x, self.y)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SerializableSize {
+    pub width: f32,
+    pub height: f32,
+}
+
+impl From<Size> for SerializableSize {
+    fn from(size: Size) -> Self {
+        Self {
+            width: size.width,
+            height: size.height,
+        }
+    }
+}
+
+impl Into<Size> for SerializableSize {
+    fn into(self) -> Size {
+        Size::new(self.width, self.height)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
-    // Store the theme name as a string
     theme_name: String,
+    window_position: SerializablePoint,
+    window_size: SerializableSize,
     // ... any other settings
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            theme_name: "Dark".to_string(),
+            window_position: SerializablePoint { x: 200.0, y: 400.0 },
+            window_size: SerializableSize {
+                width: 400.0,
+                height: 600.0,
+            },
+        }
+    }
 }
 
 impl Settings {
@@ -15,7 +71,9 @@ impl Settings {
     pub fn default() -> Self {
         Self {
             theme_name: "Dark".to_string(), // Default theme name
-                                            // ... other default settings
+            window_position: Point::new(200.0, 400.0).into(),
+            window_size: Size::new(400.0, 600.0).into(),
+            // ... other default settings
         }
     }
 
@@ -37,39 +95,34 @@ impl Settings {
         self.theme_name = theme.to_string();
     }
 
-    // Loads settings from storage
     pub fn load() -> Self {
-        let path = Self::path();
-
-        match fs::read_to_string(&path) {
-            Ok(contents) => serde_json::from_str(&contents).unwrap_or_else(|err| {
-                eprintln!("Error parsing settings: {}", err);
-                Self::default()
-            }),
-            Err(_) => Self::default(),
-        }
+        Storage::load_config()
     }
 
-    // Saves settings to storage
     pub fn save(&self) -> Result<(), String> {
-        let path = Self::path();
-
-        // Create directory if it doesn't exist
-        if let Some(dir) = path.parent() {
-            fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-        }
-
-        let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
-        fs::write(path, json).map_err(|e| e.to_string())?;
-
-        Ok(())
+        Storage::save_config(self).map_err(|e| e.to_string())
     }
 
-    // Path to settings file
+    pub fn set_window_position(&mut self, position: Point) {
+        self.window_position = position.into();
+    }
+
+    pub fn set_window_size(&mut self, size: Size) {
+        self.window_size = size.into();
+    }
+
+    pub fn get_window_position(&self) -> Point {
+        self.window_position.clone().into()
+    }
+
+    pub fn get_window_size(&self) -> Size {
+        self.window_size.clone().into()
+    }
+
     fn path() -> PathBuf {
         dirs::config_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("dbug-desktop")
-            .join("settings.json")
+            .join("config.txt")
     }
 }

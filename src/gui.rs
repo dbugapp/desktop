@@ -139,7 +139,9 @@ impl App {
         .style(|theme: &Theme, _| svg::Style {
             color: theme.palette().text.into(),
             ..svg::Style::default()
-        });
+        })
+        .width(Fill)
+        .height(Fill);
 
         let remove_all_svg = svg(svg::Handle::from_path(
             "src/assets/icons/mdi--close-box-multiple.svg",
@@ -147,19 +149,27 @@ impl App {
         .style(|theme: &Theme, _| svg::Style {
             color: theme.palette().text.into(),
             ..svg::Style::default()
-        });
+        })
+        .width(Fill)
+        .height(Fill);
 
-        let button_size = 15;
+        let button_size = 25;
 
         let content = container(
             column![
                 row![
                     horizontal_space(),
-                    button(remove_all_svg.width(button_size).height(button_size))
+                    button(remove_all_svg)
                         .style(button::secondary)
+                        .width(button_size)
+                        .height(button_size)
+                        .padding(5.0)
                         .on_press(Message::ClearPayloads),
-                    button(settings_svg.width(button_size).height(button_size))
+                    button(settings_svg)
                         .style(button::secondary)
+                        .width(button_size)
+                        .height(button_size)
+                        .padding(5.0)
                         .on_press(Message::ShowModal),
                 ]
                 .padding(10)

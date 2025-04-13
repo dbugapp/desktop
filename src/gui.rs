@@ -18,7 +18,7 @@ pub fn gui() -> iced::Result {
 
     iced::application("dbug desktop", App::update, App::view)
         .subscription(App::subscription)
-        .font(include_bytes!("../fonts/firacode.ttf").as_slice())
+        .font(include_bytes!("../assets/fonts/firacode.ttf").as_slice())
         .default_font(Font::MONOSPACE)
         .theme(App::theme)
         .window(window::Settings {
@@ -188,14 +188,14 @@ impl App {
             }
         }
        let settings_svg = svg(svg::Handle::from_path(
-            "src/assets/icons/mdi--mixer-settings.svg",
+            "assets/icons/mdi--mixer-settings.svg",
         ))
         .style(svg_style)
         .width(Fill)
         .height(Fill);
 
         let remove_all_svg = svg(svg::Handle::from_path(
-            "src/assets/icons/mdi--close-box-multiple.svg",
+            "assets/icons/mdi--close-box-multiple.svg",
         ))
         .style(svg_style)
         .width(Fill)

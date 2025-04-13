@@ -1,5 +1,6 @@
 use iced::event::Event;
 use iced::keyboard::key;
+use iced::widget::scrollable::AbsoluteOffset;
 use iced::{keyboard, Length, Theme};
 
 use crate::components;
@@ -73,9 +74,14 @@ impl App {
                         // Immediately expand the newly added payload
                         self.expanded_payload_id =
                             self.storage.get_all().first().map(|(id, _)| id.clone());
+
+                        // Scroll to top to ensure new payload is visible
+                        return widget::scrollable::scroll_to(
+                            widget::scrollable::Id::new("payload_scroll"),
+                            AbsoluteOffset { x: 0.0, y: 0.0 },
+                        );
                     }
                 }
-                Task::none()
             }
             Message::ShowModal => {
                 self.show_modal = true;

@@ -34,9 +34,9 @@ pub fn payload_list<'a>(
                         .style(|theme: &Theme| {
                             let palette = theme.extended_palette();
                             let mut bg_color = palette.secondary.strong.color;
-                            bg_color.a = 0.1;
+                            bg_color.a = 0.01;
                             let mut border_color = palette.secondary.strong.color;
-                            border_color.a = 0.5;
+                            border_color.a = 0.05;
 
                             container::Style {
                                 background: Some(bg_color.into()),

@@ -1,7 +1,6 @@
 use crate::storage::Storage;
 use iced::{Point, Size, Theme};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SerializablePoint {
@@ -67,16 +66,6 @@ impl Default for Settings {
 }
 
 impl Settings {
-    // Default settings with a built-in theme
-    pub fn default() -> Self {
-        Self {
-            theme_name: "Dark".to_string(), // Default theme name
-            window_position: Point::new(200.0, 400.0).into(),
-            window_size: Size::new(400.0, 600.0).into(),
-            // ... other default settings
-        }
-    }
-
     // Property to get the actual Theme
     pub fn theme(&self) -> Theme {
         // Find the theme by name in Theme::ALL, fallback to Dark
@@ -117,12 +106,5 @@ impl Settings {
 
     pub fn get_window_size(&self) -> Size {
         self.window_size.clone().into()
-    }
-
-    fn path() -> PathBuf {
-        dirs::config_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("dbug-desktop")
-            .join("config.txt")
     }
 }

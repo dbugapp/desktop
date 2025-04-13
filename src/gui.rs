@@ -9,7 +9,7 @@ use crate::server;
 use crate::server::ServerMessage;
 use crate::settings::Settings;
 use crate::storage::Storage;
-use iced::widget::{self, button, column, container, horizontal_space, row, svg, text};
+use iced::widget::{self, button, column, container, horizontal_space, row, svg};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
 /// Initializes and runs the GUI application

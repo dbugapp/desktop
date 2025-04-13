@@ -55,7 +55,7 @@ pub fn payload_list<'a>(
             .collect::<Vec<_>>(),
     )
     .spacing(10)
-    .padding(10);
+    .padding(iced_core::Padding { right: 10.0, left: 10.0, top: 1.0, bottom: 0.0});
 
     scrollable(container(storage_rows).padding(iced_core::Padding {
         right: 5.0,

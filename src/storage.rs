@@ -41,6 +41,34 @@ impl Storage {
         })
     }
 
+    pub fn config_path() -> PathBuf {
+        dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".dbug_desktop")
+            .join("config.json")
+    }
+
+    pub fn save_config<T: serde::Serialize>(config: &T) -> io::Result<()> {
+        let config_file = Self::config_path();
+        let fallback = PathBuf::from(".");
+        let dir = config_file.parent().unwrap_or(&fallback);
+        fs::create_dir_all(dir)?;
+
+        let file = File::create(config_file)?;
+        serde_json::to_writer_pretty(file, config)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+    }
+
+    pub fn load_config<T: serde::de::DeserializeOwned + Default>() -> T {
+        let config_file = Self::config_path();
+
+        if let Ok(file) = File::open(config_file) {
+            serde_json::from_reader(file).unwrap_or_default()
+        } else {
+            T::default()
+        }
+    }
+
     /// Adds a JSON value to the storage
     pub fn add_json(&self, json: &Value) -> io::Result<()> {
         let id = Utc::now().timestamp_millis().to_string();

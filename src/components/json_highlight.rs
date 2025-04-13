@@ -46,8 +46,11 @@ pub fn highlight_json(json: &str, theme: &Theme) -> Element<'static, Message> {
 
                 for c in trimmed_line.chars() {
                     if c == '"' {
-                        current_token.push(c);
                         if in_string {
+                            if current_token.starts_with('"') && current_token.ends_with('"') {
+                                current_token =
+                                    current_token[1..current_token.len() - 1].to_string();
+                            }
                             tokens.push((current_token.clone(), is_key, true));
                             current_token.clear();
                             if is_key {

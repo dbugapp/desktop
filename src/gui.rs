@@ -1,5 +1,6 @@
 use iced::event::Event;
 use iced::keyboard::key;
+use iced::widget::scrollable::AbsoluteOffset;
 use iced::{keyboard, Length, Theme};
 
 use crate::components;
@@ -9,12 +10,14 @@ use crate::server::ServerMessage;
 use crate::settings::Settings;
 use crate::storage::Storage;
 use iced::widget::{self, button, column, container, horizontal_space, row, svg};
-use iced::{Bottom, Element, Fill, Subscription, Task};
+use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
     iced::application("dbug desktop", App::update, App::view)
         .subscription(App::subscription)
+        .font(include_bytes!("../fonts/firacode.ttf").as_slice())
+        .default_font(Font::MONOSPACE)
         .theme(App::theme)
         .run()
 }
@@ -29,11 +32,14 @@ struct App {
 
 impl Default for App {
     fn default() -> Self {
+        let storage = Storage::new().expect("Failed to initialize storage");
+        let newest_payload_id = storage.get_all().first().map(|(id, _)| id.clone());
+
         Self {
             show_modal: false,
             settings: Settings::load(),
-            storage: Storage::new().expect("Failed to initialize storage"),
-            expanded_payload_id: None,
+            storage,
+            expanded_payload_id: newest_payload_id,
         }
     }
 }
@@ -65,9 +71,17 @@ impl App {
                         if let Err(e) = self.storage.add_json(&value) {
                             eprintln!("Failed to store payload: {}", e);
                         }
+                        // Immediately expand the newly added payload
+                        self.expanded_payload_id =
+                            self.storage.get_all().first().map(|(id, _)| id.clone());
+
+                        // Scroll to top to ensure new payload is visible
+                        widget::scrollable::scroll_to(
+                            widget::scrollable::Id::new("payload_scroll"),
+                            AbsoluteOffset { x: 0.0, y: 0.0 },
+                        )
                     }
                 }
-                Task::none()
             }
             Message::ShowModal => {
                 self.show_modal = true;

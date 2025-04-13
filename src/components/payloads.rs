@@ -33,11 +33,12 @@ pub fn payload_list<'a>(
                         .width(Fill)
                         .style(|theme: &Theme| {
                             let palette = theme.extended_palette();
+                            let mut bg_color = palette.background.weak.color;
+                            bg_color.a = 0.3;
+
                             container::Style {
-                                background: Some(palette.background.base.color.into()),
-                                border: iced_core::border::rounded(5)
-                                    .color(palette.secondary.base.color)
-                                    .width(1.0),
+                                background: Some(bg_color.into()),
+                                border: iced_core::border::rounded(5),
                                 ..container::Style::default()
                             }
                         })
@@ -48,7 +49,6 @@ pub fn payload_list<'a>(
 
                     button(container(content).width(Fill))
                         .width(Fill)
-                        .style(button::secondary)
                         .on_press(Message::TogglePayload(id.clone()))
                         .into()
                 }
@@ -56,12 +56,21 @@ pub fn payload_list<'a>(
             .collect::<Vec<_>>(),
     )
     .spacing(10)
-    .padding(10);
+    .padding(iced_core::Padding {
+        right: 5.0,
+        left: 5.0,
+        top: 1.0,
+        bottom: 0.0,
+    });
 
     scrollable(container(storage_rows).padding(iced_core::Padding {
         right: 5.0,
         ..Default::default()
     }))
+    .direction(scrollable::Direction::Vertical(
+        scrollable::Scrollbar::new().width(5).scroller_width(5),
+    ))
+    .id(iced::widget::scrollable::Id::new("payload_scroll"))
     .width(Fill)
     .height(Fill)
     .into()

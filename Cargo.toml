@@ -19,3 +19,4 @@ serde = { version = "1.0.219", features = ["derive"] }
 futures = "0.3.31"
 palette = "0.7.6"
 iced_core = "0.13.2"
+millisecond = "0.7.0"

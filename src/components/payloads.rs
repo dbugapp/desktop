@@ -3,6 +3,7 @@ use crate::gui::Message;
 use crate::storage::Storage;
 use iced::widget::{button, column, container, scrollable, text};
 use iced::{Element, Fill, Theme};
+use iced_core::text::Wrapping;
 
 /// Creates a scrollable display of all received JSON payloads
 pub fn payload_list<'a>(
@@ -44,7 +45,7 @@ pub fn payload_list<'a>(
                         .into()
                 } else {
                     // For non-expanded items, use a button with secondary styling
-                    let content = text(format!("{}", value));
+                    let content = text(format!("{}", value)).height(22.0);
 
                     button(container(content).width(Fill))
                         .width(Fill)

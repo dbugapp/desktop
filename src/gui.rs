@@ -48,6 +48,7 @@ pub(crate) enum Message {
     Server(ServerMessage),
     ThemeChanged(usize),
     TogglePayload(String), // Toggle expansion of a payload by its ID
+    ClearPayloads,         // Clear all payloads
 }
 
 impl App {
@@ -95,6 +96,12 @@ impl App {
                 }
                 Task::none()
             }
+            Message::ClearPayloads => {
+                if let Err(e) = self.storage.delete_all() {
+                    eprintln!("Failed to clear payloads: {}", e);
+                }
+                Task::none()
+            }
             Message::Event(event) => match event {
                 Event::Keyboard(keyboard::Event::KeyPressed {
                     key: keyboard::Key::Named(key::Named::Tab),
@@ -126,31 +133,53 @@ impl App {
 
     /// Renders the application view
     fn view(&self) -> Element<Message> {
-        let handle = svg::Handle::from_path("src/assets/icons/mdi--mixer-settings.svg");
-
-        let svg_widget = svg(handle).style(|theme: &Theme, _| svg::Style {
+        let settings_svg = svg(svg::Handle::from_path(
+            "src/assets/icons/mdi--mixer-settings.svg",
+        ))
+        .style(|theme: &Theme, _| svg::Style {
             color: theme.palette().text.into(),
             ..svg::Style::default()
-        });
+        })
+        .width(Fill)
+        .height(Fill);
 
-        // Use the payloads component with expanded ID
-        let payloads = components::payload_list(
-            &self.storage,
-            self.expanded_payload_id.as_ref(),
-            &self.theme(),
-        );
+        let remove_all_svg = svg(svg::Handle::from_path(
+            "src/assets/icons/mdi--close-box-multiple.svg",
+        ))
+        .style(|theme: &Theme, _| svg::Style {
+            color: theme.palette().text.into(),
+            ..svg::Style::default()
+        })
+        .width(Fill)
+        .height(Fill);
+
+        let button_size = 25;
 
         let content = container(
             column![
                 row![
                     horizontal_space(),
-                    button(svg_widget.width(20).height(20))
+                    button(remove_all_svg)
                         .style(button::secondary)
-                        .on_press(Message::ShowModal)
+                        .width(button_size)
+                        .height(button_size)
+                        .padding(5.0)
+                        .on_press(Message::ClearPayloads),
+                    button(settings_svg)
+                        .style(button::secondary)
+                        .width(button_size)
+                        .height(button_size)
+                        .padding(5.0)
+                        .on_press(Message::ShowModal),
                 ]
-                .padding(10) // Add padding to the entire row
+                .padding(10)
+                .spacing(10)
                 .height(Length::Shrink),
-                payloads,
+                components::payload_list(
+                    &self.storage,
+                    self.expanded_payload_id.as_ref(),
+                    &self.theme()
+                ),
                 row![horizontal_space()]
                     .align_y(Bottom)
                     .height(Length::Shrink),

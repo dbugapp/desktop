@@ -1,9 +1,9 @@
+use chrono::Utc;
+use serde_json::Value;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use chrono::Utc;
-use serde_json::Value;
 
 /// Storage struct to manage data persistence
 #[derive(Clone)]
@@ -82,6 +82,16 @@ impl Storage {
         }
 
         Ok(found)
+    }
+
+    /// Deletes all stored data
+    pub fn delete_all(&self) -> io::Result<()> {
+        {
+            let mut data = self.data.lock().unwrap();
+            data.clear();
+        }
+
+        self.save_to_file()
     }
 
     /// Saves the current state to a file

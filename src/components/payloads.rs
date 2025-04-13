@@ -44,7 +44,7 @@ pub fn payload_list<'a>(
                         .into()
                 } else {
                     // For non-expanded items, use a button with secondary styling
-                    let content = text(format!("{}", value));
+                    let content = text(format!("{}", value)).height(22.0);
 
                     button(container(content).width(Fill))
                         .width(Fill)

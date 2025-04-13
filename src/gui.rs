@@ -76,10 +76,10 @@ impl App {
                             self.storage.get_all().first().map(|(id, _)| id.clone());
 
                         // Scroll to top to ensure new payload is visible
-                        return widget::scrollable::scroll_to(
+                        widget::scrollable::scroll_to(
                             widget::scrollable::Id::new("payload_scroll"),
                             AbsoluteOffset { x: 0.0, y: 0.0 },
-                        );
+                        )
                     }
                 }
             }

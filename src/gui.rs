@@ -29,11 +29,14 @@ struct App {
 
 impl Default for App {
     fn default() -> Self {
+        let storage = Storage::new().expect("Failed to initialize storage");
+        let newest_payload_id = storage.get_all().first().map(|(id, _)| id.clone());
+
         Self {
             show_modal: false,
             settings: Settings::load(),
-            storage: Storage::new().expect("Failed to initialize storage"),
-            expanded_payload_id: None,
+            storage,
+            expanded_payload_id: newest_payload_id,
         }
     }
 }
@@ -65,6 +68,9 @@ impl App {
                         if let Err(e) = self.storage.add_json(&value) {
                             eprintln!("Failed to store payload: {}", e);
                         }
+                        // Immediately expand the newly added payload
+                        self.expanded_payload_id =
+                            self.storage.get_all().first().map(|(id, _)| id.clone());
                     }
                 }
                 Task::none()

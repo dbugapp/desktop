@@ -36,7 +36,7 @@ pub fn payload_list<'a>(
                             container::Style {
                                 background: Some(palette.background.base.color.into()),
                                 border: iced_core::border::rounded(5)
-                                    .color(palette.secondary.base.color)
+                                    .color(palette.secondary.weak.color)
                                     .width(1.0),
                                 ..container::Style::default()
                             }
@@ -48,7 +48,6 @@ pub fn payload_list<'a>(
 
                     button(container(content).width(Fill))
                         .width(Fill)
-                        .style(button::secondary)
                         .on_press(Message::TogglePayload(id.clone()))
                         .into()
                 }

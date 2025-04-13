@@ -58,7 +58,7 @@ impl Storage {
     /// Retrieves all stored data
     pub fn get_all(&self) -> Vec<(String, Value)> {
         let data = self.data.lock().unwrap();
-        data.clone()
+        data.iter().rev().cloned().collect()
     }
 
     /// Deletes an item by ID

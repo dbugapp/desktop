@@ -2,7 +2,7 @@ use crate::components::json_highlight::highlight_json;
 use crate::gui::Message;
 use crate::storage::Storage;
 use iced::widget::{button, column, container, scrollable, text};
-use iced::{Element, Fill, Theme};
+use iced::{Element, Fill, Font, Theme};
 
 /// Creates a scrollable display of all received JSON payloads
 pub fn payload_list<'a>(

@@ -9,12 +9,14 @@ use crate::server::ServerMessage;
 use crate::settings::Settings;
 use crate::storage::Storage;
 use iced::widget::{self, button, column, container, horizontal_space, row, svg};
-use iced::{Bottom, Element, Fill, Subscription, Task};
+use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
     iced::application("dbug desktop", App::update, App::view)
         .subscription(App::subscription)
+        .font(include_bytes!("../fonts/firacode.ttf").as_slice())
+        .default_font(Font::MONOSPACE)
         .theme(App::theme)
         .run()
 }

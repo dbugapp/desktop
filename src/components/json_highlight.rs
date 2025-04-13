@@ -27,16 +27,24 @@ fn color_for_token(token: &str, is_key: bool, in_string: bool, theme: &Theme) ->
 pub fn highlight_json(json: &str, theme: &Theme) -> Element<'static, Message> {
     let lines = json.lines().map(|line| line.to_owned()).collect::<Vec<_>>();
 
+    let mut indent_level: usize = 0;
+    let indent_size = 2;
+
     column(
         lines
             .into_iter()
             .map(|line| {
+                let trimmed_line = line.trim();
+                if trimmed_line.starts_with('}') || trimmed_line.starts_with(']') {
+                    indent_level = indent_level.saturating_sub(1);
+                }
+
                 let mut is_key = true;
                 let mut in_string = false;
                 let mut current_token = String::new();
                 let mut tokens = Vec::new();
 
-                for c in line.chars() {
+                for c in trimmed_line.chars() {
                     if c == '"' {
                         current_token.push(c);
                         if in_string {
@@ -66,7 +74,7 @@ pub fn highlight_json(json: &str, theme: &Theme) -> Element<'static, Message> {
                     tokens.push((current_token, is_key, false));
                 }
 
-                row(tokens
+                let row_element = row(tokens
                     .into_iter()
                     .map(|(token, is_key, in_string)| {
                         let color = color_for_token(&token, is_key, in_string, theme);
@@ -74,8 +82,15 @@ pub fn highlight_json(json: &str, theme: &Theme) -> Element<'static, Message> {
                             .style(move |_| iced::widget::text::Style { color: Some(color) })
                             .into()
                     })
-                    .collect::<Vec<Element<'_, Message>>>())
-                .into()
+                    .collect::<Vec<Element<'_, Message>>>());
+
+                let indented_row = row![text(" ".repeat(indent_level * indent_size)), row_element];
+
+                if trimmed_line.ends_with('{') || trimmed_line.ends_with('[') {
+                    indent_level += 1;
+                }
+
+                indented_row.into()
             })
             .collect::<Vec<_>>(),
     )

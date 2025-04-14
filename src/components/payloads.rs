@@ -43,7 +43,7 @@ pub fn payload_list<'a>(
                     let highlighted_json = highlight_json(&pretty_json, theme);
 
                     let close_svg =
-                        svg(svg::Handle::from_path("assets/icons/mdi--close-circle.svg"))
+                        svg(svg::Handle::from_path("assets/icons/mdi--close.svg"))
                             .width(Fill)
                             .height(Fill)
                             .style(styles::svg_style_secondary);
@@ -87,9 +87,9 @@ pub fn payload_list<'a>(
                     .style(|theme: &Theme| {
                         let palette = theme.extended_palette();
                         let mut bg_color = palette.secondary.strong.color;
-                        bg_color.a = 0.01;
+                        bg_color.a = 0.05;
                         let mut border_color = palette.secondary.strong.color;
-                        border_color.a = 0.05;
+                        border_color.a = 0.1;
 
                         container::Style {
                             background: Some(bg_color.into()),

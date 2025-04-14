@@ -17,9 +17,9 @@ impl From<Point> for SerializablePoint {
     }
 }
 
-impl Into<Point> for SerializablePoint {
-    fn into(self) -> Point {
-        Point::new(self.x, self.y)
+impl From<SerializablePoint> for Point {
+    fn from(val: SerializablePoint) -> Self {
+        Point::new(val.x, val.y)
     }
 }
 
@@ -38,9 +38,9 @@ impl From<Size> for SerializableSize {
     }
 }
 
-impl Into<Size> for SerializableSize {
-    fn into(self) -> Size {
-        Size::new(self.width, self.height)
+impl From<SerializableSize> for Size {
+    fn from(val: SerializableSize) -> Self {
+        Size::new(val.width, val.height)
     }
 }
 

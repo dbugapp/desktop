@@ -10,12 +10,12 @@ use millisecond::prelude::*;
 
 /// Converts a timestamp ID into a human-readable relative time string
 fn human_readable_time(id: &str) -> String {
+
     id.parse::<i64>()
         .ok()
         .and_then(DateTime::<Utc>::from_timestamp_millis)
-        .map(|time| Utc::now().signed_duration_since(time))
-        .map(|duration| Duration::from_millis(duration.num_milliseconds() as u64).relative())
-        .unwrap_or_else(|| "Invalid timestamp".to_string())
+        .map(|time| Utc::now().signed_duration_since(time)).map_or_else(|| "Invalid timestamp".to_string(), |duration| Duration::from_millis(duration.num_milliseconds() as u64).relative())
+
 }
 
 /// Creates a scrollable display of all received JSON payloads
@@ -34,10 +34,7 @@ pub fn payload_list<'a>(
 
                 if is_expanded {
                     // Pretty print the JSON with proper indentation
-                    let pretty_json = match serde_json::to_string_pretty(value) {
-                        Ok(formatted) => formatted,
-                        Err(_) => format!("{:?}", value),
-                    };
+                    let pretty_json = serde_json::to_string_pretty(value).unwrap_or_else(|_| format!("{value:?}"));
 
                     // Use syntax highlighting for JSON with the current theme
                     let highlighted_json = highlight_json(&pretty_json, theme);
@@ -104,7 +101,7 @@ pub fn payload_list<'a>(
                 } else {
                     button(
                         stack![
-                            text(format!("{}", value)).height(22.0),
+                            text(format!("{value}")).height(22.0),
                             container(text(timestamp).size(10.0))
                                 .padding(4.0)
                                 .align_x(iced::alignment::Horizontal::Right)

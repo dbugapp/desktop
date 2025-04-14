@@ -88,11 +88,11 @@ impl App {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Server(server_message) => {
-                println!("{:?}", server_message);
+                println!("{server_message:?}");
                 match server_message {
                     ServerMessage::PayloadReceived(value) => {
                         if let Err(e) = self.storage.add_json(&value) {
-                            eprintln!("Failed to store payload: {}", e);
+                            eprintln!("Failed to store payload: {e}");
                         }
                         // Immediately expand the newly added payload
                         self.expanded_payload_id =
@@ -118,7 +118,7 @@ impl App {
                 if let Some(theme) = Theme::ALL.get(index).cloned() {
                     self.settings.set_theme(theme);
                     if let Err(e) = self.settings.save() {
-                        eprintln!("Failed to save settings: {}", e);
+                        eprintln!("Failed to save settings: {e}");
                     }
                 }
                 Task::none()
@@ -135,13 +135,13 @@ impl App {
             }
             Message::ClearPayloads => {
                 if let Err(e) = self.storage.delete_all() {
-                    eprintln!("Failed to clear payloads: {}", e);
+                    eprintln!("Failed to clear payloads: {e}");
                 }
                 Task::none()
             }
             Message::DeletePayload(id) => {
                 if let Err(e) = self.storage._delete(&id) {
-                    eprintln!("Failed to delete payload: {}", e);
+                    eprintln!("Failed to delete payload: {e}");
                 }
                 if self.expanded_payload_id.as_ref() == Some(&id) {
                     self.expanded_payload_id = None;

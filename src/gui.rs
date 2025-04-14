@@ -4,6 +4,7 @@ use iced::widget::scrollable::AbsoluteOffset;
 use iced::{keyboard, window, Length, Theme};
 
 use crate::components;
+use crate::components::styles;
 use crate::gui::Message::Server;
 use crate::server;
 use crate::server::ServerMessage;
@@ -191,35 +192,23 @@ impl App {
 
     /// Renders the application view
     fn view(&self) -> Element<Message> {
-        fn svg_style_primary(theme: &Theme, _status: svg::Status) -> svg::Style {
-            svg::Style {
-                color: theme.extended_palette().secondary.base.text.into(),
-                ..svg::Style::default()
-            }
-        }
-        fn svg_style_secondary(theme: &Theme, _status: svg::Status) -> svg::Style {
-            svg::Style {
-                color: theme.extended_palette().secondary.base.text.into(),
-                ..svg::Style::default()
-            }
-        }
 
         let logo_svg = svg(svg::Handle::from_path("assets/icons/mdi--ladybug.svg"))
-            .style(svg_style_primary)
+            .style(styles::svg_style_primary)
             .width(Fill)
             .height(Fill);
 
         let settings_svg = svg(svg::Handle::from_path(
             "assets/icons/mdi--mixer-settings.svg",
         ))
-        .style(svg_style_secondary)
+        .style(styles::svg_style_secondary)
         .width(Fill)
         .height(Fill);
 
         let remove_all_svg = svg(svg::Handle::from_path(
             "assets/icons/mdi--trash-can.svg",
         ))
-        .style(svg_style_secondary)
+        .style(styles::svg_style_secondary)
         .width(Fill)
         .height(Fill);
 

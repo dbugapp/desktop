@@ -6,6 +6,17 @@ use core::time::Duration;
 use iced::widget::{button, column, container, row, scrollable, svg, text};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
+use crate::components::styles;
+
+/// Converts a timestamp ID into a human-readable relative time string
+fn human_readable_time(id: &str) -> String {
+    id.parse::<i64>()
+        .ok()
+        .and_then(DateTime::<Utc>::from_timestamp_millis)
+        .map(|time| Utc::now().signed_duration_since(time))
+        .map(|duration| Duration::from_millis(duration.num_milliseconds() as u64).relative())
+        .unwrap_or_else(|| "Invalid timestamp".to_string())
+}
 
 /// Creates a scrollable display of all received JSON payloads
 pub fn payload_list<'a>(
@@ -19,18 +30,9 @@ pub fn payload_list<'a>(
             .iter()
             .map(|(id, value)| {
                 let is_expanded = expanded_id == Some(id);
+                let timestamp = human_readable_time(id);
 
                 if is_expanded {
-                    let human_readable_time = id
-                        .parse::<i64>()
-                        .ok()
-                        .and_then(DateTime::<Utc>::from_timestamp_millis)
-                        .map(|time| Utc::now().signed_duration_since(time))
-                        .map(|duration| {
-                            Duration::from_millis(duration.num_milliseconds() as u64).relative()
-                        })
-                        .unwrap_or_else(|| "Invalid timestamp".to_string());
-
                     // Pretty print the JSON with proper indentation
                     let pretty_json = match serde_json::to_string_pretty(value) {
                         Ok(formatted) => formatted,
@@ -44,18 +46,18 @@ pub fn payload_list<'a>(
                         svg(svg::Handle::from_path("assets/icons/mdi--close-circle.svg"))
                             .width(Fill)
                             .height(Fill)
-                            .style(svg_style_secondary);
+                            .style(styles::svg_style_secondary);
 
                     let delete_svg = svg(svg::Handle::from_path("assets/icons/mdi--trash-can.svg"))
                         .width(Fill)
                         .height(Fill)
-                        .style(svg_style_danger);
+                        .style(styles::svg_style_danger);
 
                     // For expanded items, use a container with similar styling but not a button
                     container(
                         column![
                             row![
-                                container(text(human_readable_time).size(10.0))
+                                container(text(timestamp).size(10.0))
                                     .padding(3.0)
                                     .align_x(iced::alignment::Horizontal::Right)
                                     .align_y(iced::alignment::Vertical::Bottom)
@@ -97,12 +99,22 @@ pub fn payload_list<'a>(
                     })
                     .into()
                 } else {
-                    // For non-expanded items, use a button with secondary styling
-                    button(text(format!("{}", value)).height(22.0))
-                        .style(button::secondary)
-                        .width(Fill)
-                        .on_press(Message::TogglePayload(id.clone()))
-                        .into()
+                    button(
+                        row![
+                            text(format!("{}", value)).height(22.0),
+                            container(text(timestamp).size(10.0))
+                                .padding(4.0)
+                                .align_x(iced::alignment::Horizontal::Right)
+                                .align_y(iced::alignment::Vertical::Center)
+                                .width(Fill)
+                        ]
+                        .spacing(5)
+                        .width(Fill),
+                    )
+                    .style(button::secondary)
+                    .width(Fill)
+                    .on_press(Message::TogglePayload(id.clone()))
+                    .into()
                 }
             })
             .collect::<Vec<_>>(),
@@ -126,24 +138,4 @@ pub fn payload_list<'a>(
     .width(Fill)
     .height(Fill)
     .into()
-}
-
-fn svg_style_danger(theme: &Theme, _status: svg::Status) -> svg::Style {
-    svg::Style {
-        color: theme.extended_palette().danger.base.color.into(),
-        ..svg::Style::default()
-    }
-}
-
-fn svg_style_primary(theme: &Theme, _status: svg::Status) -> svg::Style {
-    svg::Style {
-        color: theme.extended_palette().secondary.base.text.into(),
-        ..svg::Style::default()
-    }
-}
-fn svg_style_secondary(theme: &Theme, _status: svg::Status) -> svg::Style {
-    svg::Style {
-        color: theme.extended_palette().secondary.base.text.into(),
-        ..svg::Style::default()
-    }
 }

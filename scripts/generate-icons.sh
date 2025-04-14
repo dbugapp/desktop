@@ -2,7 +2,7 @@
 set -x
 cd $(git rev-parse --show-toplevel)/assets
 
-src=assets/macos/icon.png
+src=icon.png
 
 conv_opts="-colors 256 -background none -density 300"
 

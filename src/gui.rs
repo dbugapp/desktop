@@ -4,6 +4,7 @@ use iced::widget::scrollable::AbsoluteOffset;
 use iced::{keyboard, window, Length, Theme};
 
 use crate::components;
+use crate::components::styles;
 use crate::gui::Message::Server;
 use crate::server;
 use crate::server::ServerMessage;
@@ -16,7 +17,7 @@ use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 pub fn gui() -> iced::Result {
     let settings = Settings::load();
 
-    iced::application("dbug desktop", App::update, App::view)
+    iced::application(App::default, App::update, App::view).title("dbug desktop")
         .subscription(App::subscription)
         .font(include_bytes!("../assets/fonts/firacode.ttf").as_slice())
         .default_font(Font::MONOSPACE)
@@ -62,6 +63,7 @@ pub(crate) enum Message {
     ThemeChanged(usize),
     TogglePayload(String), // Toggle expansion of a payload by its ID
     ClearPayloads,         // Clear all payloads
+    DeletePayload(String), // Delete a payload by its ID
     WindowMoved(iced::Point),
     WindowResized(iced::Size),
     WindowClosed,
@@ -136,6 +138,15 @@ impl App {
                 }
                 Task::none()
             }
+            Message::DeletePayload(id) => {
+                if let Err(e) = self.storage._delete(&id) {
+                    eprintln!("Failed to delete payload: {}", e);
+                }
+                if self.expanded_payload_id.as_ref() == Some(&id) {
+                    self.expanded_payload_id = None;
+                }
+                Task::none()
+            }
             Message::Event(event) => match event {
                 Event::Keyboard(keyboard::Event::KeyPressed {
                     key: keyboard::Key::Named(key::Named::Tab),
@@ -181,31 +192,23 @@ impl App {
 
     /// Renders the application view
     fn view(&self) -> Element<Message> {
-        fn svg_style_primary(theme: &Theme, _status: svg::Status) -> svg::Style {
-            svg::Style {
-                color: theme.extended_palette().secondary.base.text.into(),
-                ..svg::Style::default()
-            }
-        }
-        fn svg_style_secondary(theme: &Theme, _status: svg::Status) -> svg::Style {
-            svg::Style {
-                color: theme.extended_palette().secondary.base.text.into(),
-                ..svg::Style::default()
-            }
-        }
 
         let logo_svg = svg(svg::Handle::from_path("assets/icons/mdi--ladybug.svg"))
-        .style(svg_style_primary)
+            .style(styles::svg_style_primary)
+            .width(Fill)
+            .height(Fill);
+
+        let settings_svg = svg(svg::Handle::from_path(
+            "assets/icons/mdi--mixer-settings.svg",
+        ))
+        .style(styles::svg_style_secondary)
         .width(Fill)
         .height(Fill);
 
-        let settings_svg = svg(svg::Handle::from_path( "assets/icons/mdi--mixer-settings.svg"))
-        .style(svg_style_secondary)
-        .width(Fill)
-        .height(Fill);
-
-        let remove_all_svg = svg(svg::Handle::from_path("assets/icons/mdi--close-box-multiple.svg"))
-        .style(svg_style_secondary)
+        let remove_all_svg = svg(svg::Handle::from_path(
+            "assets/icons/mdi--trash-can.svg",
+        ))
+        .style(styles::svg_style_secondary)
         .width(Fill)
         .height(Fill);
 
@@ -214,19 +217,22 @@ impl App {
         let content = container(
             column![
                 row![
-                    button(logo_svg).width(button_size).height(button_size).padding(3.0),
-                    horizontal_space(),
-                    button(remove_all_svg)
-                        .style(button::secondary)
+                    button(logo_svg)
                         .width(button_size)
                         .height(button_size)
-                        .padding(5.0)
+                        .padding(3.0),
+                    horizontal_space(),
+                    button(remove_all_svg)
+                        .style(button::danger)
+                        .width(button_size)
+                        .height(button_size)
+                        .padding(3.0)
                         .on_press(Message::ClearPayloads),
                     button(settings_svg)
                         .style(button::secondary)
                         .width(button_size)
                         .height(button_size)
-                        .padding(5.0)
+                        .padding(3.0)
                         .on_press(Message::ShowModal),
                 ]
                 .padding(10)

@@ -1,8 +1,22 @@
 use crate::components::json_highlight::highlight_json;
 use crate::gui::Message;
 use crate::storage::Storage;
-use iced::widget::{button, column, container, scrollable, text};
+use chrono::{DateTime, Utc};
+use core::time::Duration;
+use iced::widget::{button, column, container, row, stack, scrollable, svg, text};
 use iced::{Element, Fill, Theme};
+use millisecond::prelude::*;
+use crate::components::styles;
+
+/// Converts a timestamp ID into a human-readable relative time string
+fn human_readable_time(id: &str) -> String {
+    id.parse::<i64>()
+        .ok()
+        .and_then(DateTime::<Utc>::from_timestamp_millis)
+        .map(|time| Utc::now().signed_duration_since(time))
+        .map(|duration| Duration::from_millis(duration.num_milliseconds() as u64).relative())
+        .unwrap_or_else(|| "Invalid timestamp".to_string())
+}
 
 /// Creates a scrollable display of all received JSON payloads
 pub fn payload_list<'a>(
@@ -16,6 +30,7 @@ pub fn payload_list<'a>(
             .iter()
             .map(|(id, value)| {
                 let is_expanded = expanded_id == Some(id);
+                let timestamp = human_readable_time(id);
 
                 if is_expanded {
                     // Pretty print the JSON with proper indentation
@@ -27,30 +42,77 @@ pub fn payload_list<'a>(
                     // Use syntax highlighting for JSON with the current theme
                     let highlighted_json = highlight_json(&pretty_json, theme);
 
-                    // For expanded items, use a container with similar styling but not a button
-                    container(column![highlighted_json].spacing(5).width(Fill))
-                        .padding(10)
-                        .width(Fill)
-                        .style(|theme: &Theme| {
-                            let palette = theme.extended_palette();
-                            let mut bg_color = palette.secondary.strong.color;
-                            bg_color.a = 0.01;
-                            let mut border_color = palette.secondary.strong.color;
-                            border_color.a = 0.05;
+                    let close_svg =
+                        svg(svg::Handle::from_path("assets/icons/mdi--close.svg"))
+                            .width(Fill)
+                            .height(Fill)
+                            .style(styles::svg_style_secondary);
 
-                            container::Style {
-                                background: Some(bg_color.into()),
-                                border: iced_core::border::rounded(5).color(border_color).width(1.0),
-                                ..container::Style::default()
-                            }
-                        })
-                        .into()
-                } else {
-                    // For non-expanded items, use a button with secondary styling
-                    button(text(format!("{}", value)).height(22.0)).style(button::secondary)
+                    let delete_svg = svg(svg::Handle::from_path("assets/icons/mdi--trash-can.svg"))
                         .width(Fill)
-                        .on_press(Message::TogglePayload(id.clone()))
-                        .into()
+                        .height(Fill)
+                        .style(styles::svg_style_danger);
+
+                    // For expanded items, use a container with similar styling but not a button
+                    container(
+                        stack![
+                                highlighted_json,
+                            container(row![
+                                container(
+                                    text(timestamp).size(10.0))
+                                    .padding(3.0)
+                                    .align_x(iced::alignment::Horizontal::Right)
+                                    .align_y(iced::alignment::Vertical::Bottom)
+                                    .width(Fill),
+                                button(delete_svg)
+                                    .style(button::text)
+                                    .width(20)
+                                    .height(20)
+                                    .padding(2.0)
+                                    .on_press(Message::DeletePayload(id.clone())),
+                                button(close_svg)
+                                    .style(button::text)
+                                    .width(20)
+                                    .height(20)
+                                    .padding(2.0)
+                                    .on_press(Message::TogglePayload(id.clone()))
+                            ]).align_top(Fill).align_right(Fill)
+                            .width(Fill),
+                        ]
+                        .width(Fill),
+                    )
+                    .padding(10)
+                    .width(Fill)
+                    .style(|theme: &Theme| {
+                        let palette = theme.extended_palette();
+                        let mut bg_color = palette.secondary.strong.color;
+                        bg_color.a = 0.05;
+                        let mut border_color = palette.secondary.strong.color;
+                        border_color.a = 0.1;
+
+                        container::Style {
+                            background: Some(bg_color.into()),
+                            border: iced_core::border::rounded(5).color(border_color).width(1.0),
+                            ..container::Style::default()
+                        }
+                    })
+                    .into()
+                } else {
+                    button(
+                        stack![
+                            text(format!("{}", value)).height(22.0),
+                            container(text(timestamp).size(10.0))
+                                .padding(4.0)
+                                .align_x(iced::alignment::Horizontal::Right)
+                                .align_y(iced::alignment::Vertical::Center)
+                                .width(Fill)
+                        ]
+                        .width(Fill),
+                    )
+                    .style(button::secondary)
+                    .width(Fill)
+                    .on_press(Message::TogglePayload(id.clone()))
+                    .into()
                 }
             })
             .collect::<Vec<_>>(),

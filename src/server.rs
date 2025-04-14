@@ -17,7 +17,7 @@ pub(crate) enum _ServerInput {
 
  pub fn listen() -> impl Stream<Item = ServerMessage> {
 
-     stream::channel(100, |output| async move {
+     stream::channel(100, |output: futures::channel::mpsc::Sender<ServerMessage>| async move {
          let payload = warp::post()
              .and(warp::body::json())
              .map({

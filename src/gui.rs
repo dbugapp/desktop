@@ -108,6 +108,11 @@ impl App {
                         self.expanded_payload_id =
                             self.storage.get_all().first().map(|(id, _)| id.clone());
 
+                        // Update content with the newly received payload
+                        let pretty_json = serde_json::to_string_pretty(&value)
+                            .unwrap_or_else(|_| format!("{value:?}"));
+                        self.content = text_editor::Content::with_text(&pretty_json);
+
                         // Scroll to top to ensure new payload is visible
                         widget::scrollable::scroll_to(
                             widget::scrollable::Id::new("payload_scroll"),

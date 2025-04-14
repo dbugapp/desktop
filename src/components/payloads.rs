@@ -49,8 +49,6 @@ pub fn payload_list<'a>(
                 let timestamp = human_readable_time(id);
 
                 if is_expanded {
-                    let highlighted_json = highlight_json(content, theme);
-
                     let close_svg = svg(svg::Handle::from_memory(
                         include_bytes!("../../assets/icons/mdi--close.svg").as_slice(),
                     ))
@@ -68,7 +66,7 @@ pub fn payload_list<'a>(
                     // For expanded items, use a container with similar styling but not a button
                     container(
                         stack![
-                            highlighted_json,
+                            highlight_json(content, theme),
                             container(row![
                                 container(text(timestamp).size(10.0))
                                     .padding(3.0)

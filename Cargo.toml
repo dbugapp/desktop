@@ -19,6 +19,8 @@ serde = { version = "1.0.219", features = ["derive"] }
 futures = "0.3.31"
 iced_core = { git = "https://github.com/iced-rs/iced.git", branch = "master" }
 millisecond = "0.7.0"
+syntect = "5.2.0"
+two-face = "0.4.3"
 
 
 [profile.ci]

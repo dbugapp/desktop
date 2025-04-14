@@ -4,18 +4,20 @@ use crate::gui::Message;
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
-use iced::widget::{button, column, container, row, scrollable, stack, svg, text};
+use iced::widget::{button, column, container, row, scrollable, stack, svg, text, text_editor};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
 
 /// Converts a timestamp ID into a human-readable relative time string
 fn human_readable_time(id: &str) -> String {
-
     id.parse::<i64>()
         .ok()
         .and_then(DateTime::<Utc>::from_timestamp_millis)
-        .map(|time| Utc::now().signed_duration_since(time)).map_or_else(|| "Invalid timestamp".to_string(), |duration| Duration::from_millis(duration.num_milliseconds() as u64).relative())
-
+        .map(|time| Utc::now().signed_duration_since(time))
+        .map_or_else(
+            || "Invalid timestamp".to_string(),
+            |duration| Duration::from_millis(duration.num_milliseconds() as u64).relative(),
+        )
 }
 
 /// Creates a scrollable display of all received JSON payloads
@@ -23,6 +25,7 @@ pub fn payload_list<'a>(
     storage: &Storage,
     expanded_id: Option<&String>,
     theme: &Theme,
+    content: &'a text_editor::Content,
 ) -> Element<'a, Message> {
     let storage_rows = column(
         storage
@@ -33,11 +36,7 @@ pub fn payload_list<'a>(
                 let timestamp = human_readable_time(id);
 
                 if is_expanded {
-                    // Pretty print the JSON with proper indentation
-                    let pretty_json = serde_json::to_string_pretty(value).unwrap_or_else(|_| format!("{value:?}"));
-
-                    // Use syntax highlighting for JSON with the current theme
-                    let highlighted_json = highlight_json(&pretty_json, theme);
+                    let highlighted_json = highlight_json(content, theme);
 
                     let close_svg = svg(svg::Handle::from_memory(
                         include_bytes!("../../assets/icons/mdi--close.svg").as_slice(),

@@ -10,7 +10,7 @@ use crate::server;
 use crate::server::ServerMessage;
 use crate::settings::Settings;
 use crate::storage::Storage;
-use iced::widget::{self, button, column, container, horizontal_space, row, svg};
+use iced::widget::{self, button, column, container, horizontal_space, row, svg, text_editor};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
 /// Initializes and runs the GUI application
@@ -37,6 +37,7 @@ struct App {
     settings: Settings,
     storage: Storage,
     expanded_payload_id: Option<String>, // Track which payload is currently expanded
+    content: text_editor::Content,
 }
 
 impl Default for App {
@@ -49,6 +50,7 @@ impl Default for App {
             settings: Settings::load(),
             storage,
             expanded_payload_id: newest_payload_id,
+            content: text_editor::Content::new(),
         }
     }
 }
@@ -124,12 +126,20 @@ impl App {
                 Task::none()
             }
             Message::TogglePayload(id) => {
-                // If this is the currently expanded payload, collapse it
                 if self.expanded_payload_id.as_ref() == Some(&id) {
                     self.expanded_payload_id = None;
                 } else {
-                    // Otherwise, expand this payload and collapse any other
-                    self.expanded_payload_id = Some(id);
+                    self.expanded_payload_id = Some(id.clone());
+                    if let Some((_, payload)) = self
+                        .storage
+                        .get_all()
+                        .iter()
+                        .find(|(item_id, _)| item_id == &id)
+                    {
+                        let pretty_json = serde_json::to_string_pretty(payload)
+                            .unwrap_or_else(|_| format!("{payload:?}"));
+                        self.content = text_editor::Content::with_text(&pretty_json);
+                    }
                 }
                 Task::none()
             }
@@ -243,7 +253,8 @@ impl App {
                 components::payload_list(
                     &self.storage,
                     self.expanded_payload_id.as_ref(),
-                    &self.theme()
+                    &self.theme(),
+                    &self.content
                 ),
                 row![horizontal_space()]
                     .align_y(Bottom)

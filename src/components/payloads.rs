@@ -4,7 +4,9 @@ use crate::gui::Message;
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
-use iced::widget::{button, column, container, row, scrollable, stack, svg, text, text_editor, Column};
+use iced::widget::{
+    button, column, container, row, scrollable, stack, svg, text, text_editor, Column,
+};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
 
@@ -25,10 +27,13 @@ pub fn highlight_json<'a>(
     _theme: &Theme,
 ) -> Element<'a, Message> {
     Column::new()
-        .push(text_editor(content).highlight_with::<Highlighter>(
-            Settings::new(vec![], Highlight::default_style, "json"),
-            Highlight::to_format,
-        ))
+        .push(
+            text_editor(content)
+                .highlight_with::<Highlighter>(
+                    Settings::new(vec![], Highlight::default_style, "json"),
+                    Highlight::to_format,
+                )
+        )
         .into()
 }
 
@@ -85,14 +90,14 @@ pub fn payload_list<'a>(
                                     .height(20)
                                     .padding(2.0)
                                     .on_press(Message::TogglePayload(id.clone()))
-                            ])
+                            ]).padding(5)
                             .align_top(Fill)
                             .align_right(Fill)
                             .width(Fill),
                         ]
                         .width(Fill),
                     )
-                    .padding(10)
+                    .padding(0)
                     .width(Fill)
                     .style(|theme: &Theme| {
                         let palette = theme.extended_palette();

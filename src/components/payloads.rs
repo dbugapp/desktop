@@ -3,7 +3,7 @@ use crate::gui::Message;
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
-use iced::widget::{button, column, container, row, scrollable, svg, text};
+use iced::widget::{button, column, container, row, stack, scrollable, svg, text};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
 use crate::components::styles;
@@ -55,10 +55,11 @@ pub fn payload_list<'a>(
 
                     // For expanded items, use a container with similar styling but not a button
                     container(
-                        column![
-                            row![
+                        stack![
                                 highlighted_json,
-                                container(text(timestamp).size(10.0))
+                            container(row![
+                                container(
+                                    text(timestamp).size(10.0))
                                     .padding(3.0)
                                     .align_x(iced::alignment::Horizontal::Right)
                                     .align_y(iced::alignment::Vertical::Bottom)
@@ -75,11 +76,9 @@ pub fn payload_list<'a>(
                                     .height(20)
                                     .padding(2.0)
                                     .on_press(Message::TogglePayload(id.clone()))
-                            ]
-                            .spacing(5)
+                            ]).align_top(Fill).align_right(Fill)
                             .width(Fill),
                         ]
-                        .spacing(5)
                         .width(Fill),
                     )
                     .padding(10)
@@ -100,7 +99,7 @@ pub fn payload_list<'a>(
                     .into()
                 } else {
                     button(
-                        row![
+                        stack![
                             text(format!("{}", value)).height(22.0),
                             container(text(timestamp).size(10.0))
                                 .padding(4.0)
@@ -108,7 +107,6 @@ pub fn payload_list<'a>(
                                 .align_y(iced::alignment::Vertical::Center)
                                 .width(Fill)
                         ]
-                        .spacing(5)
                         .width(Fill),
                     )
                     .style(button::secondary)

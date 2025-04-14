@@ -17,7 +17,7 @@ use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 pub fn gui() -> iced::Result {
     let settings = Settings::load();
 
-    iced::application("dbug desktop", App::update, App::view)
+    iced::application(App::default, App::update, App::view).title("dbug desktop")
         .subscription(App::subscription)
         .font(include_bytes!("../assets/fonts/firacode.ttf").as_slice())
         .default_font(Font::MONOSPACE)

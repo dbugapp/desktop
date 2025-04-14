@@ -3,7 +3,7 @@ use crate::gui::Message;
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
-use iced::widget::{button, column, container, scrollable, text};
+use iced::widget::{button, column, container, row, scrollable, svg, text};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
 
@@ -40,12 +40,41 @@ pub fn payload_list<'a>(
                     // Use syntax highlighting for JSON with the current theme
                     let highlighted_json = highlight_json(&pretty_json, theme);
 
+                    let close_svg =
+                        svg(svg::Handle::from_path("assets/icons/mdi--close-circle.svg"))
+                            .width(Fill)
+                            .height(Fill)
+                            .style(svg_style_secondary);
+
+                    let delete_svg = svg(svg::Handle::from_path("assets/icons/mdi--trash-can.svg"))
+                        .width(Fill)
+                        .height(Fill)
+                        .style(svg_style_danger);
+
                     // For expanded items, use a container with similar styling but not a button
                     container(
                         column![
-                            container(text(human_readable_time).size(10.0))
-                                .align_x(iced::alignment::Horizontal::Right)
-                                .width(Fill),
+                            row![
+                                container(text(human_readable_time).size(10.0))
+                                    .padding(3.0)
+                                    .align_x(iced::alignment::Horizontal::Right)
+                                    .align_y(iced::alignment::Vertical::Bottom)
+                                    .width(Fill),
+                                button(delete_svg)
+                                    .style(button::text)
+                                    .width(20)
+                                    .height(20)
+                                    .padding(2.0)
+                                    .on_press(Message::DeletePayload(id.clone())),
+                                button(close_svg)
+                                    .style(button::text)
+                                    .width(20)
+                                    .height(20)
+                                    .padding(2.0)
+                                    .on_press(Message::TogglePayload(id.clone()))
+                            ]
+                            .spacing(5)
+                            .width(Fill),
                             highlighted_json
                         ]
                         .spacing(5)
@@ -97,4 +126,24 @@ pub fn payload_list<'a>(
     .width(Fill)
     .height(Fill)
     .into()
+}
+
+fn svg_style_danger(theme: &Theme, _status: svg::Status) -> svg::Style {
+    svg::Style {
+        color: theme.extended_palette().danger.base.color.into(),
+        ..svg::Style::default()
+    }
+}
+
+fn svg_style_primary(theme: &Theme, _status: svg::Status) -> svg::Style {
+    svg::Style {
+        color: theme.extended_palette().secondary.base.text.into(),
+        ..svg::Style::default()
+    }
+}
+fn svg_style_secondary(theme: &Theme, _status: svg::Status) -> svg::Style {
+    svg::Style {
+        color: theme.extended_palette().secondary.base.text.into(),
+        ..svg::Style::default()
+    }
 }

@@ -62,6 +62,7 @@ pub(crate) enum Message {
     ThemeChanged(usize),
     TogglePayload(String), // Toggle expansion of a payload by its ID
     ClearPayloads,         // Clear all payloads
+    DeletePayload(String), // Delete a payload by its ID
     WindowMoved(iced::Point),
     WindowResized(iced::Size),
     WindowClosed,
@@ -136,6 +137,15 @@ impl App {
                 }
                 Task::none()
             }
+            Message::DeletePayload(id) => {
+                if let Err(e) = self.storage._delete(&id) {
+                    eprintln!("Failed to delete payload: {}", e);
+                }
+                if self.expanded_payload_id.as_ref() == Some(&id) {
+                    self.expanded_payload_id = None;
+                }
+                Task::none()
+            }
             Message::Event(event) => match event {
                 Event::Keyboard(keyboard::Event::KeyPressed {
                     key: keyboard::Key::Named(key::Named::Tab),
@@ -195,16 +205,20 @@ impl App {
         }
 
         let logo_svg = svg(svg::Handle::from_path("assets/icons/mdi--ladybug.svg"))
-        .style(svg_style_primary)
-        .width(Fill)
-        .height(Fill);
+            .style(svg_style_primary)
+            .width(Fill)
+            .height(Fill);
 
-        let settings_svg = svg(svg::Handle::from_path( "assets/icons/mdi--mixer-settings.svg"))
+        let settings_svg = svg(svg::Handle::from_path(
+            "assets/icons/mdi--mixer-settings.svg",
+        ))
         .style(svg_style_secondary)
         .width(Fill)
         .height(Fill);
 
-        let remove_all_svg = svg(svg::Handle::from_path("assets/icons/mdi--close-box-multiple.svg"))
+        let remove_all_svg = svg(svg::Handle::from_path(
+            "assets/icons/mdi--trash-can.svg",
+        ))
         .style(svg_style_secondary)
         .width(Fill)
         .height(Fill);
@@ -214,10 +228,13 @@ impl App {
         let content = container(
             column![
                 row![
-                    button(logo_svg).width(button_size).height(button_size).padding(3.0),
+                    button(logo_svg)
+                        .width(button_size)
+                        .height(button_size)
+                        .padding(3.0),
                     horizontal_space(),
                     button(remove_all_svg)
-                        .style(button::secondary)
+                        .style(button::danger)
                         .width(button_size)
                         .height(button_size)
                         .padding(5.0)

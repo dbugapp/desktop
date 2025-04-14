@@ -1,4 +1,3 @@
-mod json_highlight;
 pub mod modal;
 pub mod payloads;
 pub mod settings;

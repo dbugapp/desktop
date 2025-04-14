@@ -1,10 +1,10 @@
-use crate::components::json_highlight::highlight_json;
+use crate::components::custom_highlighter::{Highlight, Highlighter, Settings};
 use crate::components::styles;
 use crate::gui::Message;
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
-use iced::widget::{button, column, container, row, scrollable, stack, svg, text, text_editor};
+use iced::widget::{button, column, container, row, scrollable, stack, svg, text, text_editor, Column};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
 
@@ -18,6 +18,18 @@ fn human_readable_time(id: &str) -> String {
             || "Invalid timestamp".to_string(),
             |duration| Duration::from_millis(duration.num_milliseconds() as u64).relative(),
         )
+}
+
+pub fn highlight_json<'a>(
+    content: &'a text_editor::Content,
+    _theme: &Theme,
+) -> Element<'a, Message> {
+    Column::new()
+        .push(text_editor(content).highlight_with::<Highlighter>(
+            Settings::new(vec![], Highlight::default_style, "json"),
+            Highlight::to_format,
+        ))
+        .into()
 }
 
 /// Creates a scrollable display of all received JSON payloads

@@ -45,12 +45,20 @@ impl Default for App {
         let storage = Storage::new().expect("Failed to initialize storage");
         let newest_payload_id = storage.get_all().first().map(|(id, _)| id.clone());
 
+        let content = if let Some((_, payload)) = storage.get_all().first() {
+            let pretty_json =
+                serde_json::to_string_pretty(payload).unwrap_or_else(|_| format!("{payload:?}"));
+            text_editor::Content::with_text(&pretty_json)
+        } else {
+            text_editor::Content::new()
+        };
+
         Self {
             show_modal: false,
             settings: Settings::load(),
             storage,
             expanded_payload_id: newest_payload_id,
-            content: text_editor::Content::new(),
+            content,
         }
     }
 }

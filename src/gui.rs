@@ -17,7 +17,8 @@ use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 pub fn gui() -> iced::Result {
     let settings = Settings::load();
 
-    iced::application(App::default, App::update, App::view).title("dbug desktop")
+    iced::application(App::default, App::update, App::view)
+        .title("dbug desktop")
         .subscription(App::subscription)
         .font(include_bytes!("../assets/fonts/firacode.ttf").as_slice())
         .default_font(Font::MONOSPACE)
@@ -192,25 +193,22 @@ impl App {
 
     /// Renders the application view
     fn view(&self) -> Element<Message> {
-
-        let logo_svg = svg(svg::Handle::from_path("assets/icons/mdi--ladybug.svg"))
+        let logo_svg = svg(svg::Handle::from_path("./assets/icons/mdi--ladybug.svg"))
             .style(styles::svg_style_primary)
             .width(Fill)
             .height(Fill);
 
         let settings_svg = svg(svg::Handle::from_path(
-            "assets/icons/mdi--mixer-settings.svg",
+            "./assets/icons/mdi--mixer-settings.svg",
         ))
         .style(styles::svg_style_secondary)
         .width(Fill)
         .height(Fill);
 
-        let remove_all_svg = svg(svg::Handle::from_path(
-            "assets/icons/mdi--trash-can.svg",
-        ))
-        .style(styles::svg_style_secondary)
-        .width(Fill)
-        .height(Fill);
+        let remove_all_svg = svg(svg::Handle::from_path("./assets/icons/mdi--trash-can.svg"))
+            .style(styles::svg_style_secondary)
+            .width(Fill)
+            .height(Fill);
 
         let button_size = 25;
 

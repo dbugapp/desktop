@@ -57,6 +57,7 @@ pub fn payload_list<'a>(
                     container(
                         column![
                             row![
+                                highlighted_json,
                                 container(text(timestamp).size(10.0))
                                     .padding(3.0)
                                     .align_x(iced::alignment::Horizontal::Right)
@@ -77,7 +78,6 @@ pub fn payload_list<'a>(
                             ]
                             .spacing(5)
                             .width(Fill),
-                            highlighted_json
                         ]
                         .spacing(5)
                         .width(Fill),

@@ -226,13 +226,13 @@ impl App {
                         .style(button::danger)
                         .width(button_size)
                         .height(button_size)
-                        .padding(5.0)
+                        .padding(3.0)
                         .on_press(Message::ClearPayloads),
                     button(settings_svg)
                         .style(button::secondary)
                         .width(button_size)
                         .height(button_size)
-                        .padding(5.0)
+                        .padding(3.0)
                         .on_press(Message::ShowModal),
                 ]
                 .padding(10)

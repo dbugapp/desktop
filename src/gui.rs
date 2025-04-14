@@ -193,22 +193,26 @@ impl App {
 
     /// Renders the application view
     fn view(&self) -> Element<Message> {
-        let logo_svg = svg(svg::Handle::from_path("./assets/icons/mdi--ladybug.svg"))
-            .style(styles::svg_style_primary)
-            .width(Fill)
-            .height(Fill);
+        let logo_svg = svg(svg::Handle::from_memory(
+            include_bytes!("../assets/icons/mdi--ladybug.svg").as_slice(),
+        ))
+        .style(styles::svg_style_primary)
+        .width(Fill)
+        .height(Fill);
 
-        let settings_svg = svg(svg::Handle::from_path(
-            "./assets/icons/mdi--mixer-settings.svg",
+        let settings_svg = svg(svg::Handle::from_memory(
+            include_bytes!("../assets/icons/mdi--mixer-settings.svg").as_slice(),
         ))
         .style(styles::svg_style_secondary)
         .width(Fill)
         .height(Fill);
 
-        let remove_all_svg = svg(svg::Handle::from_path("./assets/icons/mdi--trash-can.svg"))
-            .style(styles::svg_style_secondary)
-            .width(Fill)
-            .height(Fill);
+        let remove_all_svg = svg(svg::Handle::from_memory(
+            include_bytes!("../assets/icons/mdi--trash-can.svg").as_slice(),
+        ))
+        .style(styles::svg_style_secondary)
+        .width(Fill)
+        .height(Fill);
 
         let button_size = 25;
 

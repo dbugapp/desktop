@@ -1,12 +1,12 @@
 use crate::components::json_highlight::highlight_json;
+use crate::components::styles;
 use crate::gui::Message;
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
-use iced::widget::{button, column, container, row, stack, scrollable, svg, text};
+use iced::widget::{button, column, container, row, scrollable, stack, svg, text};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
-use crate::components::styles;
 
 /// Converts a timestamp ID into a human-readable relative time string
 fn human_readable_time(id: &str) -> String {
@@ -42,24 +42,26 @@ pub fn payload_list<'a>(
                     // Use syntax highlighting for JSON with the current theme
                     let highlighted_json = highlight_json(&pretty_json, theme);
 
-                    let close_svg =
-                        svg(svg::Handle::from_path("assets/icons/mdi--close.svg"))
-                            .width(Fill)
-                            .height(Fill)
-                            .style(styles::svg_style_secondary);
+                    let close_svg = svg(svg::Handle::from_memory(
+                        include_bytes!("../../assets/icons/mdi--close.svg").as_slice(),
+                    ))
+                    .width(Fill)
+                    .height(Fill)
+                    .style(styles::svg_style_secondary);
 
-                    let delete_svg = svg(svg::Handle::from_path("assets/icons/mdi--trash-can.svg"))
-                        .width(Fill)
-                        .height(Fill)
-                        .style(styles::svg_style_danger);
+                    let delete_svg = svg(svg::Handle::from_memory(
+                        include_bytes!("../../assets/icons/mdi--trash-can.svg").as_slice(),
+                    ))
+                    .width(Fill)
+                    .height(Fill)
+                    .style(styles::svg_style_danger);
 
                     // For expanded items, use a container with similar styling but not a button
                     container(
                         stack![
-                                highlighted_json,
+                            highlighted_json,
                             container(row![
-                                container(
-                                    text(timestamp).size(10.0))
+                                container(text(timestamp).size(10.0))
                                     .padding(3.0)
                                     .align_x(iced::alignment::Horizontal::Right)
                                     .align_y(iced::alignment::Vertical::Bottom)
@@ -76,7 +78,9 @@ pub fn payload_list<'a>(
                                     .height(20)
                                     .padding(2.0)
                                     .on_press(Message::TogglePayload(id.clone()))
-                            ]).align_top(Fill).align_right(Fill)
+                            ])
+                            .align_top(Fill)
+                            .align_right(Fill)
                             .width(Fill),
                         ]
                         .width(Fill),

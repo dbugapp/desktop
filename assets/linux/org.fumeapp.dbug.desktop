@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=dbug
+Comment=dbug software
+Type=Application
+Keywords=IRC;IM;Chat;
+Categories=Network;IRCClient;
+Exec=dbug %U
+Icon=org.fumeapp.dbug
+StartupWMClass=org.fumeapp.dbug
+MimeType=x-scheme-handler/irc;x-scheme-handler/ircs;x-scheme-handler/dbug;
+Terminal=false

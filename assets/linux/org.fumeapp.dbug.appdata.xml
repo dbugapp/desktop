@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+    <content_rating type="oars-1.1">
+        <content_attribute id="social-chat">moderate</content_attribute>
+    </content_rating>
+    <id>org.fumeapp.dbug</id>
+    <metadata_license>MIT</metadata_license>
+    <project_license>GPL-3.0-or-later</project_license>
+    <name>dbug</name>
+    <summary>dbug desktop</summary>
+    <description>
+        <p>
+            dbug desktop helps debug your applications.
+        </p>
+    </description>
+    <launchable type="desktop-id">org.fumeapp.dbug.desktop</launchable>
+    <url type="homepage">https://github.com/fumeapp/dbug-desktop</url>
+    <url type="bugtracker">https://github.com/fumeapp/dbug-desktop/issues</url>
+    <screenshots>
+        <screenshot type="default">
+            <caption>dbug logo</caption>
+            <image>https://raw.githubusercontent.com/squidowl/halloy/7aec18d29ffb1d3605131667c6e11d8cef6ada7b/assets/screenshot.png</image>
+        </screenshot>
+    </screenshots>
+    <developer_name>The fumeapp Development Team</developer_name>
+    <releases>
+        <release version="2025.4"
+                 date="2025-04-07" />
+    </releases>
+</component>

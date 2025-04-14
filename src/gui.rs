@@ -17,7 +17,8 @@ use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 pub fn gui() -> iced::Result {
     let settings = Settings::load();
 
-    iced::application(App::default, App::update, App::view).title("dbug desktop")
+    iced::application(App::default, App::update, App::view)
+        .title("dbug desktop")
         .subscription(App::subscription)
         .font(include_bytes!("../assets/fonts/firacode.ttf").as_slice())
         .default_font(Font::MONOSPACE)
@@ -87,11 +88,11 @@ impl App {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Server(server_message) => {
-                println!("{:?}", server_message);
+                println!("{server_message:?}");
                 match server_message {
                     ServerMessage::PayloadReceived(value) => {
                         if let Err(e) = self.storage.add_json(&value) {
-                            eprintln!("Failed to store payload: {}", e);
+                            eprintln!("Failed to store payload: {e}");
                         }
                         // Immediately expand the newly added payload
                         self.expanded_payload_id =
@@ -117,7 +118,7 @@ impl App {
                 if let Some(theme) = Theme::ALL.get(index).cloned() {
                     self.settings.set_theme(theme);
                     if let Err(e) = self.settings.save() {
-                        eprintln!("Failed to save settings: {}", e);
+                        eprintln!("Failed to save settings: {e}");
                     }
                 }
                 Task::none()
@@ -134,13 +135,13 @@ impl App {
             }
             Message::ClearPayloads => {
                 if let Err(e) = self.storage.delete_all() {
-                    eprintln!("Failed to clear payloads: {}", e);
+                    eprintln!("Failed to clear payloads: {e}");
                 }
                 Task::none()
             }
             Message::DeletePayload(id) => {
                 if let Err(e) = self.storage._delete(&id) {
-                    eprintln!("Failed to delete payload: {}", e);
+                    eprintln!("Failed to delete payload: {e}");
                 }
                 if self.expanded_payload_id.as_ref() == Some(&id) {
                     self.expanded_payload_id = None;
@@ -192,21 +193,22 @@ impl App {
 
     /// Renders the application view
     fn view(&self) -> Element<Message> {
+        let logo_svg = svg(svg::Handle::from_memory(
+            include_bytes!("../assets/icons/mdi--ladybug.svg").as_slice(),
+        ))
+        .style(styles::svg_style_primary)
+        .width(Fill)
+        .height(Fill);
 
-        let logo_svg = svg(svg::Handle::from_path("assets/icons/mdi--ladybug.svg"))
-            .style(styles::svg_style_primary)
-            .width(Fill)
-            .height(Fill);
-
-        let settings_svg = svg(svg::Handle::from_path(
-            "assets/icons/mdi--mixer-settings.svg",
+        let settings_svg = svg(svg::Handle::from_memory(
+            include_bytes!("../assets/icons/mdi--mixer-settings.svg").as_slice(),
         ))
         .style(styles::svg_style_secondary)
         .width(Fill)
         .height(Fill);
 
-        let remove_all_svg = svg(svg::Handle::from_path(
-            "assets/icons/mdi--trash-can.svg",
+        let remove_all_svg = svg(svg::Handle::from_memory(
+            include_bytes!("../assets/icons/mdi--trash-can.svg").as_slice(),
         ))
         .style(styles::svg_style_secondary)
         .width(Fill)

@@ -1,0 +1,60 @@
+name: Build
+
+on:
+  pull_request:
+    paths:
+      - '**.rs'
+      - '**/Cargo.toml'
+      - 'Cargo.lock'
+  push:
+    branches:
+      - main
+    paths:
+      - '**.rs'
+      - '**/Cargo.toml'
+      - 'Cargo.lock'
+  merge_group:
+    paths:
+      - '**.rs'
+      - '**/Cargo.toml'
+      - 'Cargo.lock'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=mold"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install \
+            build-essential \
+            git \
+            pkg-config \
+            mold \
+            clang \
+            libdbus-1-dev \
+            libudev-dev \
+            libxkbcommon-dev \
+            libfontconfig1-dev \
+            libasound2-dev
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Check
+        run: cargo check --profile ci
+      - name: Clippy
+        run: cargo clippy --profile ci --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --profile ci --workspace --all-targets

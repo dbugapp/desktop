@@ -27,9 +27,10 @@ pub fn payload_list<'a>(
     theme: &Theme,
     content: &'a text_editor::Content,
 ) -> Element<'a, Message> {
+    let all_payloads = storage.get_all(); // Cache storage results
+
     let storage_rows = column(
-        storage
-            .get_all()
+        all_payloads
             .iter()
             .map(|(id, value)| {
                 let is_expanded = expanded_id == Some(id);

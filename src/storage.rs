@@ -1,7 +1,7 @@
 use chrono::Utc;
 use serde_json::Value;
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
@@ -28,16 +28,22 @@ pub struct Storage {
 impl Storage {
     /// Creates a new Storage instance
     pub fn new() -> io::Result<Self> {
-        let mut storage_dir = dirs::home_dir()
+        // Inlined logic from storage_dir_path()
+        let storage_dir = dirs::home_dir()
+            .map(|mut path| {
+                path.push(".dbug_desktop");
+                path
+            })
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))?;
-        storage_dir.push(".dbug_desktop");
 
+        // Inlined logic from ensure_storage_dir()
         if !storage_dir.exists() {
             fs::create_dir_all(&storage_dir)?;
         }
 
         let data_file = storage_dir.join("data.json");
         let (initial_payloads, initial_total_bytes) = if data_file.exists() {
+            eprintln!("DEBUG: data.json exists. Reading...");
             let mut file = File::open(&data_file)?;
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
@@ -45,7 +51,7 @@ impl Storage {
             // Try parsing Vec<(String, Value)> first for backward compatibility
             match serde_json::from_str::<Vec<(String, Value)>>(&contents) {
                 Ok(old_data) => {
-                    eprintln!("INFO: Migrating old data format to include sizes.");
+                    eprintln!("DEBUG: Parsed old format. Migrating...");
                     let mut new_data = Vec::with_capacity(old_data.len());
                     let mut total_bytes: u64 = 0;
                     for (id, value) in old_data {
@@ -53,19 +59,29 @@ impl Storage {
                         total_bytes += size;
                         new_data.push((id, value, size));
                     }
+                     eprintln!(
+                        "DEBUG: Migration complete. {} payloads, total size: {}",
+                        new_data.len(),
+                        total_bytes
+                    );
                     (new_data, total_bytes)
                 }
                 Err(_) => {
+                    eprintln!("DEBUG: Failed parsing old format, trying new format...");
                     // If old format fails, try parsing new format Vec<(String, Value, u64)>
                     match serde_json::from_str::<Vec<(String, Value, u64)>>(&contents) {
                         Ok(parsed_data) => {
                             let total_bytes = parsed_data.iter().map(|(_, _, size)| size).sum();
-                            eprintln!("INFO: Loaded {} existing payloads, total size: {} bytes", parsed_data.len(), total_bytes);
+                            eprintln!(
+                                "DEBUG: Successfully parsed new format. {} payloads, total size: {}",
+                                parsed_data.len(),
+                                total_bytes
+                            );
                             (parsed_data, total_bytes)
                         }
                         Err(e) => {
                             eprintln!(
-                                "WARN: Failed to parse data file {data_file:?} (both formats), starting fresh: {e}"
+                                "ERROR: Failed to parse data.json (both formats), starting fresh: {e}",
                             );
                             (Vec::new(), 0)
                         }
@@ -73,11 +89,16 @@ impl Storage {
                 }
             }
         } else {
+            eprintln!("DEBUG: data.json does not exist. Starting fresh.");
             (Vec::new(), 0)
         };
 
+        eprintln!(
+            "DEBUG: Initializing Mutex with {} payloads and total size {}",
+            initial_payloads.len(), initial_total_bytes
+        );
+
         Ok(Self {
-            // Ensure initialization uses the alias structure
             data: Arc::new(Mutex::new((initial_payloads, initial_total_bytes))),
             storage_dir,
         })
@@ -90,15 +111,46 @@ impl Storage {
             .join("config.json")
     }
 
+    #[allow(clippy::map_unwrap_or)]
     pub fn save_config<T: serde::Serialize>(config: &T) -> io::Result<()> {
         let config_file = Self::config_path();
         let fallback = PathBuf::from(".");
         let dir = config_file.parent().unwrap_or(&fallback);
-        fs::create_dir_all(dir)?;
 
-        let file = File::create(config_file)?;
-        serde_json::to_writer_pretty(file, config)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        if let Err(e) = fs::create_dir_all(dir) {
+            eprintln!("ERROR: Failed to create config directory {:?}: {}", dir, e);
+            return Err(e);
+        }
+
+        let file = match File::create(&config_file) {
+            Ok(f) => {
+                f
+            }
+            Err(e) => {
+                eprintln!("ERROR: Failed to create/open config file {:?}: {}", config_file, e);
+                return Err(e);
+            }
+        };
+
+        let mut writer = io::BufWriter::new(file);
+
+        match serde_json::to_writer_pretty(&mut writer, config) {
+            Ok(_) => {
+                match writer.flush() {
+                    Ok(_) => {
+                        Ok(())
+                    }
+                    Err(e) => {
+                        eprintln!("ERROR: Failed to flush config file {:?}: {}", config_file, e);
+                        Err(e)
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("ERROR: Failed to serialize/write config to file {:?}: {}", config_file, e);
+                Err(io::Error::new(io::ErrorKind::Other, e))
+            }
+        }
     }
 
     #[allow(clippy::map_unwrap_or)] // Allow this pattern for clarity of fallback

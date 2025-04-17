@@ -211,15 +211,25 @@ impl App {
             },
             Message::WindowMoved(position) => {
                 self.settings.set_window_position(position);
+                // Save immediately on move
+                if let Err(e) = self.settings.save() {
+                    eprintln!("ERROR: Failed to save settings on move: {e}");
+                }
                 Task::none()
             }
             Message::WindowResized(size) => {
                 self.settings.set_window_size(size);
+                 // Save immediately on resize
+                if let Err(e) = self.settings.save() {
+                    eprintln!("ERROR: Failed to save settings on resize: {e}");
+                }
                 Task::none()
             }
             Message::WindowClosed => {
+                // Attempt a final save on close, but don't rely on it solely.
                 if let Err(e) = self.settings.save() {
-                    eprintln!("Failed to save settings on close: {e}");
+                    // Log quietly if needed, but main saves happen earlier.
+                    eprintln!("Note: Final settings save on close failed: {e}");
                 }
                 iced::exit()
             }

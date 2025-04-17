@@ -7,6 +7,7 @@ use core::time::Duration;
 use iced::widget::{button, column, container, row, scrollable, stack, svg, text};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
+use std::collections::HashSet;
 
 /// Converts a timestamp ID into a human-readable relative time string
 fn human_readable_time(id: &str) -> String {
@@ -23,6 +24,7 @@ pub fn payload_list<'a>(
     storage: &Storage,
     expanded_id: Option<&String>,
     theme: &Theme,
+    collapsed_json_lines: &HashSet<usize>,
 ) -> Element<'a, Message> {
     let storage_rows = column(
         storage
@@ -33,14 +35,16 @@ pub fn payload_list<'a>(
                 let timestamp = human_readable_time(id);
 
                 if is_expanded {
-                    // Pretty print the JSON with proper indentation
                     let pretty_json = serde_json::to_string_pretty(value).unwrap_or_else(|_| format!("{value:?}"));
 
-                    // Use syntax highlighting for JSON with the current theme
-                    let highlighted_json = highlight_json(&pretty_json, theme);
+                    let highlighted_json = highlight_json(
+                        &pretty_json,
+                        theme,
+                        collapsed_json_lines,
+                    );
 
                     let close_svg = svg(svg::Handle::from_memory(
-                        include_bytes!("../../assets/icons/mdi--close.svg").as_slice(),
+                        include_bytes!("../../assets/icons/mdi--caret-down.svg").as_slice(),
                     ))
                     .width(Fill)
                     .height(Fill)
@@ -51,9 +55,8 @@ pub fn payload_list<'a>(
                     ))
                     .width(Fill)
                     .height(Fill)
-                    .style(styles::svg_style_danger);
+                    .style(styles::svg_style_primary);
 
-                    // For expanded items, use a container with similar styling but not a button
                     container(
                         stack![
                             highlighted_json,
@@ -64,18 +67,17 @@ pub fn payload_list<'a>(
                                     .align_y(iced::alignment::Vertical::Bottom)
                                     .width(Fill),
                                 button(delete_svg)
-                                    .style(button::text)
-                                    .width(20)
-                                    .height(20)
-                                    .padding(2.0)
+                                    .style(button::danger)
+                                    .width(18)
+                                    .height(18)
+                                    .padding(1)
                                     .on_press(Message::DeletePayload(id.clone())),
                                 button(close_svg)
-                                    .style(button::text)
-                                    .width(20)
-                                    .height(20)
-                                    .padding(2.0)
+                                    .width(18)
+                                    .height(18)
+                                    .padding(0)
                                     .on_press(Message::TogglePayload(id.clone()))
-                            ])
+                            ].spacing(5))
                             .align_top(Fill)
                             .align_right(Fill)
                             .width(Fill),
@@ -84,35 +86,52 @@ pub fn payload_list<'a>(
                     )
                     .padding(10)
                     .width(Fill)
-                    .style(|theme: &Theme| {
-                        let palette = theme.extended_palette();
-                        let mut bg_color = palette.secondary.strong.color;
-                        bg_color.a = 0.05;
-                        let mut border_color = palette.secondary.strong.color;
-                        border_color.a = 0.1;
-
-                        container::Style {
-                            background: Some(bg_color.into()),
-                            border: iced_core::border::rounded(5).color(border_color).width(1.0),
-                            ..container::Style::default()
-                        }
-                    })
+                    .style(styles::container_code)
                     .into()
                 } else {
+                    let expand_svg = svg(svg::Handle::from_memory(
+                        include_bytes!("../../assets/icons/mdi--caret-up.svg").as_slice(),
+                    ))
+                    .width(Fill)
+                    .height(Fill)
+                    .style(styles::svg_style_secondary);
+
+                    let delete_svg = svg(svg::Handle::from_memory(
+                        include_bytes!("../../assets/icons/mdi--trash-can.svg").as_slice(),
+                    ))
+                    .width(Fill)
+                    .height(Fill)
+                    .style(styles::svg_style_primary);
+
                     button(
-                        stack![
-                            text(format!("{value}")).height(22.0),
-                            container(text(timestamp).size(10.0))
-                                .padding(4.0)
-                                .align_x(iced::alignment::Horizontal::Right)
-                                .align_y(iced::alignment::Vertical::Center)
-                                .width(Fill)
-                        ]
-                        .width(Fill),
+                        container(
+                            row![
+                                container(text(format!("{value}")).size(14).height(18.0)).width(Fill),
+                                container(text(timestamp).size(10.0))
+                                    .padding(4.0)
+                                    .align_x(iced::alignment::Horizontal::Right)
+                                    .align_y(iced::alignment::Vertical::Center),
+                                button(delete_svg)
+                                    .style(button::danger)
+                                    .width(18)
+                                    .height(18)
+                                    .padding(1)
+                                    .on_press(Message::DeletePayload(id.clone())),
+                                container(expand_svg)
+                                    .width(18)
+                                    .height(18)
+                                    .padding(0)
+                            ]
+                            .spacing(5)
+                        )
+                        .padding(10)
+                        .width(Fill)
+                        .style(styles::container_code_closed)
                     )
-                    .style(button::secondary)
+                    .style(button::text)
                     .width(Fill)
                     .on_press(Message::TogglePayload(id.clone()))
+                    .padding(0)
                     .into()
                 }
             })

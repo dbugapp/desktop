@@ -33,7 +33,8 @@ pub fn highlight_json(json: &str, theme: &Theme) -> Element<'static, Message> {
     column(
         lines
             .into_iter()
-            .map(|line| {
+            .enumerate()
+            .map(|(idx, line)| {
                 let trimmed_line = line.trim();
                 if trimmed_line.starts_with('}') || trimmed_line.starts_with(']') {
                     indent_level = indent_level.saturating_sub(1);
@@ -87,7 +88,18 @@ pub fn highlight_json(json: &str, theme: &Theme) -> Element<'static, Message> {
                     })
                     .collect::<Vec<Element<'_, Message>>>());
 
-                let indented_row = row![text(" ".repeat(indent_level * indent_size)), row_element];
+                let indented_row = row![
+                    // Line number column
+                    text(format!("{:>3} ", idx + 1))
+                        .size(12)
+                        .style(move |theme: &Theme| iced::widget::text::Style {
+                            color: Some(theme.extended_palette().background.strong.color),
+                            ..Default::default()
+                        })
+                        .width(30),
+                    text(" ".repeat(indent_level * indent_size)),
+                    row_element
+                ];
 
                 if trimmed_line.ends_with('{') || trimmed_line.ends_with('[') {
                     indent_level += 1;

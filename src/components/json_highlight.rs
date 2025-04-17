@@ -211,10 +211,23 @@ pub fn highlight_json(
             if is_collapsible && is_collapsed {
                 // Get the pre-calculated line count for this collapsed section
                 let count = collapse_counts.get(&idx).copied().unwrap_or(0);
-                // Show placeholder with line count
-                row![row_element, text(format!(" ... {} lines ...", count))
-                    .style(move |theme: &Theme| iced::widget::text::Style { color: Some(theme.extended_palette().background.strong.color), ..Default::default() })
-                ]
+                // Determine opening and closing chars (we only need the closing one now for the indicator)
+                let closing_char = if trimmed_line.ends_with('{') { "}" } else { "]" };
+                // Get the colors for the tokens and the count text
+                let token_color = color_for_token(closing_char, false, false, theme);
+                let count_color = theme.extended_palette().background.strong.color;
+
+                // Create the count indicator: { N lines } or [ N lines ]
+                // Note: The opening brace/bracket is already part of row_element
+                let count_indicator = row![
+                    text(format!(" ... {} lines ... ", count))
+                        .style(move |_| iced::widget::text::Style { color: Some(count_color) }),
+                    text(closing_char)
+                        .style(move |_| iced::widget::text::Style { color: Some(token_color) })
+                ];
+
+                // Show the original row_element followed by the count indicator
+                row![row_element, count_indicator]
             } else {
                 row_element
             }

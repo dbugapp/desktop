@@ -2,7 +2,8 @@ use iced::event::Event;
 use iced::keyboard::key;
 use iced::widget::scrollable::AbsoluteOffset;
 use iced::{keyboard, window, Length, Theme};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
+use serde_json::Value;
 
 use crate::components;
 use crate::components::styles;
@@ -13,6 +14,7 @@ use crate::settings::Settings;
 use crate::storage::Storage;
 use iced::widget::{self, button, column, container, horizontal_space, row, svg};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
+use crate::components::json_highlight::highlight_json;
 
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
@@ -39,12 +41,15 @@ struct App {
     storage: Storage,
     expanded_payload_id: Option<String>,
     collapsed_json_lines: HashSet<usize>,
+    payload_list_cache: Vec<(String, Value)>,
+    highlight_cache: HashMap<String, Element<'static, Message>>,
 }
 
 impl Default for App {
     fn default() -> Self {
         let storage = Storage::new().expect("Failed to initialize storage");
-        let newest_payload_id = storage.get_all().first().map(|(id, _)| id.clone());
+        let payload_list_cache = storage.get_all();
+        let newest_payload_id = payload_list_cache.first().map(|(id, _)| id.clone());
 
         Self {
             show_modal: false,
@@ -52,6 +57,8 @@ impl Default for App {
             storage,
             expanded_payload_id: newest_payload_id,
             collapsed_json_lines: HashSet::new(),
+            payload_list_cache,
+            highlight_cache: HashMap::new(),
         }
     }
 }
@@ -94,17 +101,32 @@ impl App {
             Server(server_message) => {
                 match server_message {
                     ServerMessage::PayloadReceived(value) => {
+                        let scroll_command;
                         if let Err(e) = self.storage.add_json(&value) {
-                            eprintln!("Failed to store payload: {e}");
-                        }
-                        self.expanded_payload_id =
-                            self.storage.get_all().first().map(|(id, _)| id.clone());
-                        self.collapsed_json_lines.clear();
+                            eprintln!("Failed to store payload: {}", e);
+                            scroll_command = Task::none();
+                        } else {
+                            self.payload_list_cache = self.storage.get_all();
+                            let new_id = self.payload_list_cache.first().map(|(id, _)| id.clone());
 
-                        widget::scrollable::scroll_to(
-                            widget::scrollable::Id::new("payload_scroll"),
-                            AbsoluteOffset { x: 0.0, y: 0.0 },
-                        )
+                            // Clear highlight cache & update expanded state
+                            self.highlight_cache.clear();
+                            if self.expanded_payload_id != new_id {
+                                self.expanded_payload_id = new_id;
+                            }
+                            self.collapsed_json_lines.clear();
+
+                            // Update cache for the newly expanded item if any
+                            if let Some(id) = &self.expanded_payload_id {
+                                self.update_highlight_cache(id);
+                            }
+
+                            scroll_command = widget::scrollable::scroll_to::<Message>(
+                                widget::scrollable::Id::new("payload_scroll"),
+                                AbsoluteOffset { x: 0.0, y: 0.0 },
+                            );
+                        }
+                        scroll_command
                     }
                 }
             }
@@ -120,7 +142,7 @@ impl App {
                 if let Some(theme) = Theme::ALL.get(index).cloned() {
                     self.settings.set_theme(theme);
                     if let Err(e) = self.settings.save() {
-                        eprintln!("Failed to save settings: {e}");
+                        eprintln!("Failed to save settings: {}", e);
                     }
                 }
                 Task::none()
@@ -128,32 +150,62 @@ impl App {
             Message::TogglePayload(id) => {
                 if self.expanded_payload_id.as_ref() == Some(&id) {
                     self.expanded_payload_id = None;
+                    self.highlight_cache.remove(&id); // Remove from cache on collapse
                 } else {
-                    self.expanded_payload_id = Some(id);
-                    self.collapsed_json_lines.clear();
+                    // Remove old highlight if switching
+                    if let Some(old_id) = self.expanded_payload_id.take() {
+                         self.highlight_cache.remove(&old_id);
+                    }
+                    self.expanded_payload_id = Some(id.clone());
+                    // Don't clear collapsed_json_lines here, they might be relevant
+                    // Update cache *if not already present*
+                    self.update_highlight_cache(&id);
                 }
                 Task::none()
             }
             Message::ToggleJsonSection(line_index) => {
-                if self.collapsed_json_lines.contains(&line_index) {
-                    self.collapsed_json_lines.remove(&line_index);
-                } else {
-                    self.collapsed_json_lines.insert(line_index);
-                }
+                 if let Some(payload_id) = self.expanded_payload_id.clone() {
+                    // Modify collapsed_json_lines (need to adapt if it stores payload_id too)
+                    if self.collapsed_json_lines.contains(&line_index) {
+                        self.collapsed_json_lines.remove(&line_index);
+                    } else {
+                        self.collapsed_json_lines.insert(line_index);
+                    }
+                    // Re-render the highlighted JSON for this payload
+                    self.update_highlight_cache(&payload_id);
+                 } else {
+                     eprintln!("WARN: ToggleJsonSection called with no expanded payload");
+                 }
                 Task::none()
             }
             Message::ClearPayloads => {
                 if let Err(e) = self.storage.delete_all() {
-                    eprintln!("Failed to clear payloads: {e}");
+                    eprintln!("Failed to clear payloads: {}", e);
+                } else {
+                    self.payload_list_cache.clear();
+                    self.expanded_payload_id = None;
+                    self.collapsed_json_lines.clear();
+                    self.highlight_cache.clear(); // Invalidate cache
                 }
                 Task::none()
             }
             Message::DeletePayload(id) => {
-                if let Err(e) = self.storage._delete(&id) {
-                    eprintln!("Failed to delete payload: {e}");
-                }
-                if self.expanded_payload_id.as_ref() == Some(&id) {
-                    self.expanded_payload_id = None;
+                let deleted = match self.storage.delete(&id) {
+                    Ok(d) => d,
+                    Err(e) => {
+                        eprintln!("Failed to delete payload: {}", e);
+                        false
+                    }
+                };
+
+                if deleted {
+                    self.payload_list_cache.retain(|(item_id, _)| item_id != &id);
+                    if self.expanded_payload_id.as_ref() == Some(&id) {
+                        self.expanded_payload_id = None;
+                    }
+                    self.highlight_cache.remove(&id); // Remove from cache
+                    // Could filter collapsed_json_lines, but clearing is simpler
+                    self.collapsed_json_lines.clear();
                 }
                 Task::none()
             }
@@ -180,16 +232,16 @@ impl App {
             },
             Message::WindowMoved(position) => {
                 self.settings.set_window_position(position);
-                let _ = self.settings.save();
                 Task::none()
             }
             Message::WindowResized(size) => {
                 self.settings.set_window_size(size);
-                let _ = self.settings.save();
                 Task::none()
             }
             Message::WindowClosed => {
-                let _ = self.settings.save();
+                if let Err(e) = self.settings.save() {
+                    eprintln!("Failed to save settings on close: {}", e);
+                }
                 iced::exit()
             }
         }
@@ -250,8 +302,9 @@ impl App {
                 .spacing(10)
                 .height(Length::Shrink),
                 components::payload_list(
-                    &self.storage,
+                    &self.payload_list_cache,
                     self.expanded_payload_id.as_ref(),
+                    &self.highlight_cache,
                     &self.theme(),
                     &self.collapsed_json_lines,
                 ),
@@ -269,6 +322,47 @@ impl App {
             components::modal(content, settings_content, Message::HideModal)
         } else {
             content.into()
+        }
+    }
+
+    /// Helper to update the highlight cache for a specific payload ID.
+    /// Only inserts if the ID exists in the payload cache.
+    fn update_highlight_cache(&mut self, id: &str) {
+        if let Some((_, value)) = self
+            .payload_list_cache
+            .iter()
+            .find(|(p_id, _)| p_id == id)
+        {
+            // Check if already cached (and assume theme hasn't changed needing update)
+            // A more robust check might compare against current theme if theme changes frequently
+            if self.highlight_cache.contains_key(id) {
+                // It exists, assume it's up-to-date for now unless collapsed lines changed
+                // We handle collapsed line changes in ToggleJsonSection explicitly
+                return;
+            }
+
+            let pretty_json = match serde_json::to_string_pretty(value) {
+                Ok(json) => json,
+                Err(e) => {
+                    eprintln!("Failed to prettify JSON for highlighting (id={}): {}", id, e);
+                    format!("Error prettifying JSON: {e}") // Basic error display
+                }
+            };
+
+            // Pass the correct collapsed lines (needs adjustment based on final structure)
+            // For now, using the current self.collapsed_json_lines - refine if needed
+            let highlighted_element = highlight_json(
+                &pretty_json,
+                &self.theme(),
+                &self.collapsed_json_lines,
+                // id, // Pass id if highlight_json needs it for messages
+            );
+            self.highlight_cache
+                .insert(id.to_string(), highlighted_element);
+        } else {
+            // This case should ideally not happen if called correctly
+            eprintln!("WARN: update_highlight_cache called for non-existent payload id: {}", id);
+            self.highlight_cache.remove(id); // Clean up if somehow present
         }
     }
 }

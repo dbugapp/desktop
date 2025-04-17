@@ -1,9 +1,9 @@
 use chrono::Utc;
 use serde_json::Value;
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 
 /// Storage struct to manage data persistence
 #[derive(Clone)]
@@ -15,8 +15,8 @@ pub struct Storage {
 impl Storage {
     /// Creates a new Storage instance
     pub fn new() -> io::Result<Self> {
-        // Create storage directory in user's home directory
-        let mut storage_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        let mut storage_dir = dirs::home_dir()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))?;
         storage_dir.push(".dbug_desktop");
 
         if !storage_dir.exists() {
@@ -25,12 +25,18 @@ impl Storage {
 
         let data_file = storage_dir.join("data.json");
         let data = if data_file.exists() {
-            // Load existing data
             let mut file = File::open(&data_file)?;
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
 
-            serde_json::from_str::<Vec<(String, Value)>>(&contents).unwrap_or_else(|_| Vec::new())
+            serde_json::from_str::<Vec<(String, Value)>>(&contents).unwrap_or_else(|e| {
+                eprintln!(
+                    "WARN: Failed to parse data file {:?}, starting fresh: {}",
+                    data_file,
+                    e
+                );
+                Vec::new()
+            })
         } else {
             Vec::new()
         };
@@ -73,35 +79,43 @@ impl Storage {
     pub fn add_json(&self, json: &Value) -> io::Result<()> {
         let id = Utc::now().timestamp_millis().to_string();
 
-        // Add to memory
-        {
-            let mut data = self.data.lock().unwrap();
-            data.push((id.clone(), json.clone()));
+        match self.data.lock() {
+            Ok(mut data) => {
+                data.push((id.clone(), json.clone()));
+            }
+            Err(poisoned) => {
+                eprintln!("ERROR: Storage mutex poisoned in add_json: {}", poisoned);
+                return Err(io::Error::new(io::ErrorKind::Other, "Mutex poisoned"));
+            }
         }
 
-        // Save to file
         self.save_to_file()
     }
 
     /// Retrieves all stored data
     pub fn get_all(&self) -> Vec<(String, Value)> {
-        let data = self.data.lock().unwrap();
-        data.iter().rev().cloned().collect()
+        match self.data.lock() {
+            Ok(data) => data.iter().rev().cloned().collect(),
+            Err(poisoned) => {
+                eprintln!("ERROR: Storage mutex poisoned in get_all: {}", poisoned);
+                Vec::new()
+            }
+        }
     }
 
     /// Deletes an item by ID
-    pub fn _delete(&self, id: &str) -> io::Result<bool> {
+    pub fn delete(&self, id: &str) -> io::Result<bool> {
         let found;
         {
-            let mut data = self.data.lock().unwrap();
-            let len_before = data.len();
-            data.retain(|(item_id, _)| {
-                if item_id == id {
-                    false // Remove this item
-                } else {
-                    true // Keep this item
+            let mut data = match self.data.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => {
+                    eprintln!("ERROR: Storage mutex poisoned in delete: {}", poisoned);
+                    return Err(io::Error::new(io::ErrorKind::Other, "Mutex poisoned"));
                 }
-            });
+            };
+            let len_before = data.len();
+            data.retain(|(item_id, _)| item_id != id);
             found = data.len() < len_before;
         }
 
@@ -114,18 +128,28 @@ impl Storage {
 
     /// Deletes all stored data
     pub fn delete_all(&self) -> io::Result<()> {
-        {
-            let mut data = self.data.lock().unwrap();
-            data.clear();
+        match self.data.lock() {
+            Ok(mut data) => {
+                data.clear();
+            }
+            Err(poisoned) => {
+                eprintln!("ERROR: Storage mutex poisoned in delete_all: {}", poisoned);
+                return Err(io::Error::new(io::ErrorKind::Other, "Mutex poisoned"));
+            }
         }
-
         self.save_to_file()
     }
 
     /// Saves the current state to a file
     fn save_to_file(&self) -> io::Result<()> {
         let data_file = self.storage_dir.join("data.json");
-        let data = self.data.lock().unwrap();
+        let data_guard = match self.data.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                eprintln!("ERROR: Storage mutex poisoned in save_to_file: {}", poisoned);
+                return Err(io::Error::new(io::ErrorKind::Other, "Mutex poisoned"));
+            }
+        };
 
         let file = OpenOptions::new()
             .write(true)
@@ -133,7 +157,9 @@ impl Storage {
             .truncate(true)
             .open(data_file)?;
 
-        serde_json::to_writer_pretty(file, &*data)
+        let writer = io::BufWriter::new(file);
+
+        serde_json::to_writer_pretty(writer, &*data_guard)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
     }
 }

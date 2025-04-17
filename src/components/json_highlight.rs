@@ -106,37 +106,60 @@ pub fn highlight_json(
         let mut in_string = false;
         let mut current_token = String::new();
         let mut tokens = Vec::new();
+        let mut prev_char = '\0'; // Track previous char for escapes
 
         if !(is_collapsed && is_collapsible && trimmed_line.is_empty()) {
             for c in trimmed_line.chars() {
                 if c == '"' {
-                    if in_string {
-                        if current_token.starts_with('"') && current_token.ends_with('"') {
-                            current_token =
-                                current_token[1..current_token.len() - 1].to_string();
-                        }
+                    if in_string && prev_char != '\\' {
+                        // End of string (unescaped quote)
                         tokens.push((current_token.clone(), is_key, true));
                         current_token.clear();
-                        if is_key {
-                            is_key = false;
+                        in_string = false;
+                        // Delimiter logic below will set is_key if appropriate
+                    } else if !in_string {
+                        // Start of string
+                        in_string = true;
+                        // Don't add the quote to current_token
+                    } else {
+                        // Inside string, and quote char itself
+                        if prev_char == '\\' {
+                            // It's an escaped quote: remove the preceding \ and add "
+                            current_token.pop(); // Remove the already added \
+                            current_token.push(c); // Add the "
+                        } else {
+                             // An unescaped quote char within a string? Technically invalid JSON,
+                             // but we'll treat it like a regular char.
+                             current_token.push(c);
                         }
                     }
-                    in_string = !in_string;
                 } else if in_string {
+                    // Regular character inside string
                     current_token.push(c);
-                } else if ['{', '}', '[', ']', ':', ','].contains(&c) {
+                } else {
+                    // Character outside string - handle delimiters, numbers, etc.
+                    // Push any accumulated token before handling the delimiter/char
                     if !current_token.trim().is_empty() {
                         tokens.push((current_token.clone(), is_key, false));
                         current_token.clear();
                     }
-                    tokens.push((c.to_string(), false, false));
-                    if c == ',' || c == '{' || c == '[' {
-                        is_key = true;
+                    // Handle the current character c
+                    if ['{', '}', '[', ']', ':', ','].contains(&c) {
+                        tokens.push((c.to_string(), false, false));
+                        if c == ',' || c == '{' || c == '[' {
+                            is_key = true; // Next token *could* be a key
+                        } else if c == ':'{
+                             is_key = false; // Next token must be a value
+                        }
+                    } else if !c.is_whitespace() {
+                        // Start accumulating a non-string token (number, bool, null)
+                        current_token.push(c);
                     }
-                } else {
-                    current_token.push(c);
+                    // Ignore whitespace outside strings
                 }
+                prev_char = c; // Update prev_char for the next iteration
             }
+            // After the loop, push any remaining token (e.g., trailing number/bool)
             if !current_token.trim().is_empty() {
                 tokens.push((current_token, is_key, false));
             }

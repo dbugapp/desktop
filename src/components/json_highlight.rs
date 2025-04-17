@@ -1,6 +1,7 @@
 use crate::gui::Message;
 use iced::widget::{column, row, text, button, svg};
 use iced::{Color, Element, Theme};
+use crate::components::styles;
 
 fn color_for_token(token: &str, is_key: bool, in_string: bool, theme: &Theme) -> Color {
     let palette = theme.extended_palette();
@@ -88,15 +89,15 @@ pub fn highlight_json(json: &str, theme: &Theme) -> Element<'static, Message> {
                     })
                     .collect::<Vec<Element<'_, Message>>>());
 
-                // Check if line contains only a single opening bracket
-                let is_collapsible = trimmed_line == "{" || trimmed_line == "[";
-                
+                // change this to check if trimmed_line ends with { or [
+                let is_collapsible = trimmed_line.ends_with('{') || trimmed_line.ends_with('[');
+
                 // Create collapse button or empty space
                 let collapse_element: Element<'_, Message> = if is_collapsible {
                     button(svg(svg::Handle::from_memory(
                         include_bytes!("../../assets/icons/mdi--caret-down.svg").as_slice(),
 
-                    )))
+                    )).style(styles::svg_style_secondary))
                         .width(15)
                         .padding(0)
                         .into()

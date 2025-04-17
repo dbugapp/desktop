@@ -63,6 +63,7 @@ pub(crate) enum Message {
     Server(ServerMessage),
     ThemeChanged(usize),
     TogglePayload(String), // Toggle expansion of a payload by its ID
+    UpdatePayload(String), // Update the payload window when an expand/collapse is clicked
     ClearPayloads,         // Clear all payloads
     DeletePayload(String), // Delete a payload by its ID
     WindowMoved(iced::Point),
@@ -121,6 +122,9 @@ impl App {
                         eprintln!("Failed to save settings: {e}");
                     }
                 }
+                Task::none()
+            }
+            Message::UpdatePayload(id) => {
                 Task::none()
             }
             Message::TogglePayload(id) => {

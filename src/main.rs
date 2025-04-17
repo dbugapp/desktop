@@ -1,3 +1,4 @@
+mod app;
 mod components;
 mod gui;
 mod server;

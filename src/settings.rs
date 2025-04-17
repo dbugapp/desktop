@@ -58,7 +58,7 @@ impl Default for Settings {
             theme_name: "Catppuccin Mocha".to_string(),
             window_position: SerializablePoint { x: 200.0, y: 400.0 },
             window_size: SerializableSize {
-                width: 600.0,
+                width: 1280.0,
                 height: 800.0,
             },
         }

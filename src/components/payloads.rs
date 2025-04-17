@@ -1,6 +1,6 @@
 use crate::components::json_highlight::highlight_json;
 use crate::components::styles;
-use crate::gui::Message;
+use crate::app::Message;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
 use iced::widget::{button, column, container, row, scrollable, stack, svg, text};

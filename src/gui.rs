@@ -2,16 +2,14 @@ use iced::event::Event;
 use iced::keyboard::key;
 use iced::widget::scrollable::AbsoluteOffset;
 use iced::{keyboard, window, Length, Theme};
-use std::collections::HashSet;
-use serde_json::Value;
 
 use crate::components;
 use crate::components::styles;
-use crate::gui::Message::Server;
+use crate::app::{App, Message};
+use crate::app::Message::Server;
 use crate::server;
 use crate::server::ServerMessage;
 use crate::settings::Settings;
-use crate::storage::Storage;
 use iced::widget::{self, button, column, container, horizontal_space, row, svg, text};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
@@ -31,51 +29,6 @@ pub fn gui() -> iced::Result {
             ..window::Settings::default()
         })
         .run()
-}
-
-/// Application state and logic
-struct App {
-    show_modal: bool,
-    settings: Settings,
-    storage: Storage,
-    expanded_payload_id: Option<String>,
-    collapsed_json_lines: HashSet<usize>,
-    payload_list_cache: Vec<(String, Value)>,
-}
-
-impl Default for App {
-    fn default() -> Self {
-        let storage = Storage::new().expect("Failed to initialize storage");
-        let payload_list_cache = storage.get_all();
-        let newest_payload_id = payload_list_cache.first().map(|(id, _)| id.clone());
-
-        Self {
-            show_modal: false,
-            settings: Settings::load(),
-            storage,
-            expanded_payload_id: newest_payload_id,
-            collapsed_json_lines: HashSet::new(),
-            payload_list_cache,
-        }
-    }
-}
-
-/// Messages used for application state updates
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub(crate) enum Message {
-    ShowModal,
-    HideModal,
-    Event(Event),
-    Server(ServerMessage),
-    ThemeChanged(usize),
-    TogglePayload(String),
-    ToggleJsonSection(usize),
-    ClearPayloads,
-    DeletePayload(String),
-    WindowMoved(iced::Point),
-    WindowResized(iced::Size),
-    WindowClosed,
 }
 
 impl App {

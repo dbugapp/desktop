@@ -1,4 +1,4 @@
-use crate::gui::Message;
+use crate::app::Message;
 use iced::widget::{column, row, text, button, svg};
 use iced::{Color, Element, Theme};
 use std::collections::{HashMap, HashSet};

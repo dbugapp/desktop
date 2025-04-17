@@ -92,7 +92,7 @@ impl App {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Server(server_message) => {
-                println!("{server_message:?}");
+                // println!("{server_message:?}");
                 match server_message {
                     ServerMessage::PayloadReceived(value) => {
                         if let Err(e) = self.storage.add_json(&value) {
@@ -225,7 +225,7 @@ impl App {
         .height(Fill);
 
         let remove_all_svg = svg(svg::Handle::from_memory(
-            include_bytes!("../assets/icons/mdi--trash-can.svg").as_slice(),
+            include_bytes!("../assets/icons/mdi--delete-variant.svg").as_slice(),
         ))
         .style(styles::svg_style_secondary)
         .width(Fill)

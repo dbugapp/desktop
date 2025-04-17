@@ -1,5 +1,5 @@
 use crate::gui::Message;
-use iced::widget::{column, row, text, button, svg, horizontal_space};
+use iced::widget::{column, row, text, button, svg};
 use iced::{Color, Element, Theme};
 use std::collections::{HashMap, HashSet};
 use crate::components::styles;

@@ -1,9 +1,9 @@
 use chrono::Utc;
 use serde_json::Value;
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex};
 
 /// Storage struct to manage data persistence
 #[derive(Clone)]
@@ -66,10 +66,22 @@ impl Storage {
     }
 
     pub fn load_config<T: serde::de::DeserializeOwned + Default>() -> T {
-        let config_file = Self::config_path();
+        let config_file = dirs::home_dir()
+            .map(|mut p| {
+                p.push(".dbug_desktop");
+                p.join("config.json")
+            })
+            .unwrap_or_else(|| PathBuf::from("./.dbug_desktop/config.json"));
 
-        if let Ok(file) = File::open(config_file) {
-            serde_json::from_reader(file).unwrap_or_default()
+        if let Ok(file) = File::open(&config_file) {
+            serde_json::from_reader(file).unwrap_or_else(|e| {
+                eprintln!(
+                    "WARN: Failed to parse config file {:?}, using defaults: {}",
+                    config_file,
+                    e
+                );
+                T::default()
+            })
         } else {
             T::default()
         }

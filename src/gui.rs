@@ -2,7 +2,7 @@ use iced::event::Event;
 use iced::keyboard::key;
 use iced::widget::scrollable::AbsoluteOffset;
 use iced::{keyboard, window, Length, Theme};
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 use serde_json::Value;
 
 use crate::components;
@@ -14,7 +14,6 @@ use crate::settings::Settings;
 use crate::storage::Storage;
 use iced::widget::{self, button, column, container, horizontal_space, row, svg};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
-use crate::components::json_highlight::highlight_json;
 
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
@@ -42,7 +41,6 @@ struct App {
     expanded_payload_id: Option<String>,
     collapsed_json_lines: HashSet<usize>,
     payload_list_cache: Vec<(String, Value)>,
-    highlight_cache: HashMap<String, Element<'static, Message>>,
 }
 
 impl Default for App {
@@ -58,7 +56,6 @@ impl Default for App {
             expanded_payload_id: newest_payload_id,
             collapsed_json_lines: HashSet::new(),
             payload_list_cache,
-            highlight_cache: HashMap::new(),
         }
     }
 }
@@ -107,19 +104,8 @@ impl App {
                             scroll_command = Task::none();
                         } else {
                             self.payload_list_cache = self.storage.get_all();
-                            let new_id = self.payload_list_cache.first().map(|(id, _)| id.clone());
-
-                            // Clear highlight cache & update expanded state
-                            self.highlight_cache.clear();
-                            if self.expanded_payload_id != new_id {
-                                self.expanded_payload_id = new_id;
-                            }
+                            self.expanded_payload_id = self.payload_list_cache.first().map(|(id, _)| id.clone());
                             self.collapsed_json_lines.clear();
-
-                            // Update cache for the newly expanded item if any
-                            if let Some(id) = &self.expanded_payload_id {
-                                self.update_highlight_cache(id);
-                            }
 
                             scroll_command = widget::scrollable::scroll_to::<Message>(
                                 widget::scrollable::Id::new("payload_scroll"),
@@ -150,29 +136,25 @@ impl App {
             Message::TogglePayload(id) => {
                 if self.expanded_payload_id.as_ref() == Some(&id) {
                     self.expanded_payload_id = None;
-                    self.highlight_cache.remove(&id); // Remove from cache on collapse
                 } else {
-                    // Remove old highlight if switching
-                    if let Some(old_id) = self.expanded_payload_id.take() {
-                         self.highlight_cache.remove(&old_id);
+                    if let Some(_old_id) = self.expanded_payload_id.take() {
+                         // No cache to update
+                         // self.update_highlight_cache(&old_id);
                     }
                     self.expanded_payload_id = Some(id.clone());
-                    // Don't clear collapsed_json_lines here, they might be relevant
-                    // Update cache *if not already present*
-                    self.update_highlight_cache(&id);
+                    // self.update_highlight_cache(&id);
                 }
                 Task::none()
             }
             Message::ToggleJsonSection(line_index) => {
-                 if let Some(payload_id) = self.expanded_payload_id.clone() {
-                    // Modify collapsed_json_lines (need to adapt if it stores payload_id too)
+                 if let Some(_payload_id) = self.expanded_payload_id.clone() {
                     if self.collapsed_json_lines.contains(&line_index) {
                         self.collapsed_json_lines.remove(&line_index);
                     } else {
                         self.collapsed_json_lines.insert(line_index);
                     }
-                    // Re-render the highlighted JSON for this payload
-                    self.update_highlight_cache(&payload_id);
+                    // No cache to update
+                    // self.update_highlight_cache(&payload_id);
                  } else {
                      eprintln!("WARN: ToggleJsonSection called with no expanded payload");
                  }
@@ -185,7 +167,6 @@ impl App {
                     self.payload_list_cache.clear();
                     self.expanded_payload_id = None;
                     self.collapsed_json_lines.clear();
-                    self.highlight_cache.clear(); // Invalidate cache
                 }
                 Task::none()
             }
@@ -203,8 +184,6 @@ impl App {
                     if self.expanded_payload_id.as_ref() == Some(&id) {
                         self.expanded_payload_id = None;
                     }
-                    self.highlight_cache.remove(&id); // Remove from cache
-                    // Could filter collapsed_json_lines, but clearing is simpler
                     self.collapsed_json_lines.clear();
                 }
                 Task::none()
@@ -304,7 +283,6 @@ impl App {
                 components::payload_list(
                     &self.payload_list_cache,
                     self.expanded_payload_id.as_ref(),
-                    &self.highlight_cache,
                     &self.theme(),
                     &self.collapsed_json_lines,
                 ),
@@ -325,49 +303,6 @@ impl App {
         }
     }
 
-    /// Helper to update the highlight cache for a specific payload ID.
-    /// Only inserts if the ID exists in the payload cache.
-    fn update_highlight_cache(&mut self, id: &str) {
-        if let Some((_, value)) = self
-            .payload_list_cache
-            .iter()
-            .find(|(p_id, _)| p_id == id)
-        {
-            // Check if already cached (and assume theme hasn't changed needing update)
-            // A more robust check might compare against current theme if theme changes frequently
-            if self.highlight_cache.contains_key(id) {
-                // It exists, assume it's up-to-date for now unless collapsed lines changed
-                // We handle collapsed line changes in ToggleJsonSection explicitly
-                return;
-            }
-
-            let pretty_json = match serde_json::to_string_pretty(value) {
-                Ok(json) => json,
-                Err(e) => {
-                    eprintln!("Failed to prettify JSON for highlighting (id={}): {}", id, e);
-                    format!("Error prettifying JSON: {e}") // Basic error display
-                }
-            };
-
-            // Pass the correct collapsed lines (needs adjustment based on final structure)
-            // For now, using the current self.collapsed_json_lines - refine if needed
-            let highlighted_element = highlight_json(
-                &pretty_json,
-                &self.theme(),
-                &self.collapsed_json_lines,
-                // id, // Pass id if highlight_json needs it for messages
-            );
-            self.highlight_cache
-                .insert(id.to_string(), highlighted_element);
-        } else {
-            // This case should ideally not happen if called correctly
-            eprintln!("WARN: update_highlight_cache called for non-existent payload id: {}", id);
-            self.highlight_cache.remove(id); // Clean up if somehow present
-        }
-    }
-}
-
-impl App {
     /// Hides the modal dialog
     fn hide_modal(&mut self) {
         self.show_modal = false;

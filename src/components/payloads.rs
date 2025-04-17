@@ -1,13 +1,12 @@
 use crate::components::json_highlight::highlight_json;
 use crate::components::styles;
 use crate::gui::Message;
-use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
 use iced::widget::{button, column, container, row, scrollable, stack, svg, text};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 use serde_json::Value;
 
 /// Converts a timestamp ID into a human-readable relative time string
@@ -24,7 +23,6 @@ fn human_readable_time(id: &str) -> String {
 pub fn payload_list<'a>(
     payloads: &'a [(String, Value)],
     expanded_id: Option<&String>,
-    highlight_cache: &'a HashMap<String, Element<'static, Message>>,
     theme: &Theme,
     collapsed_json_lines: &HashSet<usize>,
 ) -> Element<'a, Message> {
@@ -36,11 +34,6 @@ pub fn payload_list<'a>(
                 let timestamp = human_readable_time(id);
 
                 if is_expanded {
-                    if let Some(cached_element) = highlight_cache.get(id) {
-                        return cached_element.clone();
-                    }
-
-                    eprintln!("WARN: Highlight cache miss for expanded payload id: {}", id);
                     let pretty_json = serde_json::to_string_pretty(value).unwrap_or_else(|err| {
                         eprintln!("Error prettifying payload {}: {}", id, err);
                         format!("{{ \"error\": \"Failed to render JSON: {err}\" }}")

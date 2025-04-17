@@ -61,7 +61,7 @@ pub fn highlight_json(
         }
 
         // change this to check if trimmed_line ends with { or [
-        let is_collapsible = trimmed_line.ends_with('{') || trimmed_line.ends_with('[');
+        let is_collapsible = (trimmed_line.ends_with('{') || trimmed_line.ends_with('[')) && idx != 0;
         let is_collapsed = collapsed_lines.contains(&idx);
 
         let mut is_key = true;
@@ -149,7 +149,7 @@ pub fn highlight_json(
             // Line number column
             text(format!("{:>3} ", idx + 1))
                 .size(12)
-                .style(move |theme: &Theme| iced::widget::text::Style {
+                .style(move |theme: &Theme| text::Style {
                     color: Some(theme.extended_palette().background.strong.color),
                     ..Default::default()
                 })

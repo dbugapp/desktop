@@ -46,7 +46,7 @@ pub fn payload_list<'a>(
                     );
 
                     let close_svg = svg(svg::Handle::from_memory(
-                        include_bytes!("../../assets/icons/mdi--close.svg").as_slice(),
+                        include_bytes!("../../assets/icons/mdi--caret-down.svg").as_slice(),
                     ))
                     .width(Fill)
                     .height(Fill)
@@ -57,7 +57,7 @@ pub fn payload_list<'a>(
                     ))
                     .width(Fill)
                     .height(Fill)
-                    .style(styles::svg_style_danger);
+                    .style(styles::svg_style_primary);
 
                     // For expanded items, use a container with similar styling but not a button
                     container(
@@ -70,18 +70,18 @@ pub fn payload_list<'a>(
                                     .align_y(iced::alignment::Vertical::Bottom)
                                     .width(Fill),
                                 button(delete_svg)
-                                    .style(button::text)
-                                    .width(20)
-                                    .height(20)
-                                    .padding(2.0)
+                                    .style(button::danger)
+                                    .width(18)
+                                    .height(18)
+                                    .padding(1)
                                     .on_press(Message::DeletePayload(id.clone())),
                                 button(close_svg)
                                     .style(button::secondary)
-                                    .width(20)
-                                    .height(20)
-                                    .padding(2.0)
+                                    .width(18)
+                                    .height(18)
+                                    .padding(0)
                                     .on_press(Message::TogglePayload(id.clone()))
-                            ])
+                            ].spacing(5))
                             .align_top(Fill)
                             .align_right(Fill)
                             .width(Fill),

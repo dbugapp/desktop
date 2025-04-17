@@ -55,11 +55,11 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            theme_name: "Dark".to_string(),
+            theme_name: "Catppuccin Mocha".to_string(),
             window_position: SerializablePoint { x: 200.0, y: 400.0 },
             window_size: SerializableSize {
-                width: 400.0,
-                height: 600.0,
+                width: 600.0,
+                height: 800.0,
             },
         }
     }

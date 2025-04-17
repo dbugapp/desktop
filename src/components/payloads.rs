@@ -35,7 +35,7 @@ pub fn payload_list<'a>(
 
                 if is_expanded {
                     let pretty_json = serde_json::to_string_pretty(value).unwrap_or_else(|err| {
-                        eprintln!("Error prettifying payload {}: {}", id, err);
+                        eprintln!("Error prettifying payload {id}: {err}");
                         format!("{{ \"error\": \"Failed to render JSON: {err}\" }}")
                     });
 

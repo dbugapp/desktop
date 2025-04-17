@@ -12,7 +12,7 @@ use crate::server;
 use crate::server::ServerMessage;
 use crate::settings::Settings;
 use crate::storage::Storage;
-use iced::widget::{self, button, column, container, horizontal_space, row, svg};
+use iced::widget::{self, button, column, container, horizontal_space, row, svg, text};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
 /// Initializes and runs the GUI application
@@ -100,7 +100,7 @@ impl App {
                     ServerMessage::PayloadReceived(value) => {
                         let scroll_command;
                         if let Err(e) = self.storage.add_json(&value) {
-                            eprintln!("Failed to store payload: {}", e);
+                            eprintln!("Failed to store payload: {e}");
                             scroll_command = Task::none();
                         } else {
                             self.payload_list_cache = self.storage.get_all();
@@ -128,7 +128,7 @@ impl App {
                 if let Some(theme) = Theme::ALL.get(index).cloned() {
                     self.settings.set_theme(theme);
                     if let Err(e) = self.settings.save() {
-                        eprintln!("Failed to save settings: {}", e);
+                        eprintln!("Failed to save settings: {e}");
                     }
                 }
                 Task::none()
@@ -162,7 +162,7 @@ impl App {
             }
             Message::ClearPayloads => {
                 if let Err(e) = self.storage.delete_all() {
-                    eprintln!("Failed to clear payloads: {}", e);
+                    eprintln!("Failed to clear payloads: {e}");
                 } else {
                     self.payload_list_cache.clear();
                     self.expanded_payload_id = None;
@@ -174,7 +174,7 @@ impl App {
                 let deleted = match self.storage.delete(&id) {
                     Ok(d) => d,
                     Err(e) => {
-                        eprintln!("Failed to delete payload: {}", e);
+                        eprintln!("Failed to delete payload: {e}");
                         false
                     }
                 };
@@ -219,7 +219,7 @@ impl App {
             }
             Message::WindowClosed => {
                 if let Err(e) = self.settings.save() {
-                    eprintln!("Failed to save settings on close: {}", e);
+                    eprintln!("Failed to save settings on close: {e}");
                 }
                 iced::exit()
             }
@@ -255,6 +255,7 @@ impl App {
         .height(Fill);
 
         let button_size = 25;
+        let payload_count = self.payload_list_cache.len();
 
         let content = container(
             column![
@@ -264,6 +265,8 @@ impl App {
                         .height(button_size)
                         .padding(3.0),
                     horizontal_space(),
+                    text(format!("{payload_count}"))
+                        .size(14),
                     button(remove_all_svg)
                         .style(button::danger)
                         .width(button_size)
@@ -279,6 +282,7 @@ impl App {
                 ]
                 .padding(10)
                 .spacing(10)
+                .align_y(iced::alignment::Vertical::Center)
                 .height(Length::Shrink),
                 components::payload_list(
                     &self.payload_list_cache,

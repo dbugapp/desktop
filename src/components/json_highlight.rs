@@ -220,7 +220,7 @@ pub fn highlight_json(
                 // Create the count indicator: { N lines } or [ N lines ]
                 // Note: The opening brace/bracket is already part of row_element
                 let count_indicator = row![
-                    text(format!(" ... {} lines ... ", count))
+                    text(format!(" {} lines ", count))
                         .style(move |_| iced::widget::text::Style { color: Some(count_color) }),
                     text(closing_char)
                         .style(move |_| iced::widget::text::Style { color: Some(token_color) })

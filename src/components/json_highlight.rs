@@ -149,7 +149,7 @@ pub fn highlight_json(
             // Line number column
             text(format!("{:>3} ", idx + 1))
                 .size(12)
-                .style(move |theme: &Theme| text::Style {
+                .style(move |theme: &Theme| iced::widget::text::Style {
                     color: Some(theme.extended_palette().background.strong.color),
                     ..Default::default()
                 })

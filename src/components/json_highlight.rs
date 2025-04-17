@@ -136,6 +136,7 @@ pub fn highlight_json(
             )
             .width(15)
             .padding(0)
+            .style(button::secondary)
             .on_press(Message::ToggleJsonSection(idx)) // Attach the message
             .into()
         } else {

@@ -76,7 +76,7 @@ pub fn payload_list<'a>(
                                     .padding(2.0)
                                     .on_press(Message::DeletePayload(id.clone())),
                                 button(close_svg)
-                                    .style(button::text)
+                                    .style(button::secondary)
                                     .width(20)
                                     .height(20)
                                     .padding(2.0)

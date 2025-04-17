@@ -2,6 +2,7 @@ use iced::event::Event;
 use iced::keyboard::key;
 use iced::widget::scrollable::AbsoluteOffset;
 use iced::{keyboard, window, Length, Theme};
+use std::collections::HashSet;
 
 use crate::components;
 use crate::components::styles;
@@ -37,6 +38,7 @@ struct App {
     settings: Settings,
     storage: Storage,
     expanded_payload_id: Option<String>, // Track which payload is currently expanded
+    collapsed_json_lines: HashSet<usize>, // Track collapsed lines in the expanded payload
 }
 
 impl Default for App {
@@ -49,6 +51,7 @@ impl Default for App {
             settings: Settings::load(),
             storage,
             expanded_payload_id: newest_payload_id,
+            collapsed_json_lines: HashSet::new(), // Initialize the set
         }
     }
 }
@@ -63,7 +66,7 @@ pub(crate) enum Message {
     Server(ServerMessage),
     ThemeChanged(usize),
     TogglePayload(String), // Toggle expansion of a payload by its ID
-    UpdatePayload(String), // Update the payload window when an expand/collapse is clicked
+    ToggleJsonSection(usize), // Add this message variant
     ClearPayloads,         // Clear all payloads
     DeletePayload(String), // Delete a payload by its ID
     WindowMoved(iced::Point),
@@ -98,6 +101,8 @@ impl App {
                         // Immediately expand the newly added payload
                         self.expanded_payload_id =
                             self.storage.get_all().first().map(|(id, _)| id.clone());
+                        // Clear collapsed lines for the new payload
+                        self.collapsed_json_lines.clear();
 
                         // Scroll to top to ensure new payload is visible
                         widget::scrollable::scroll_to(
@@ -124,9 +129,6 @@ impl App {
                 }
                 Task::none()
             }
-            Message::UpdatePayload(id) => {
-                Task::none()
-            }
             Message::TogglePayload(id) => {
                 // If this is the currently expanded payload, collapse it
                 if self.expanded_payload_id.as_ref() == Some(&id) {
@@ -134,7 +136,18 @@ impl App {
                 } else {
                     // Otherwise, expand this payload and collapse any other
                     self.expanded_payload_id = Some(id);
+                    // Clear collapsed lines when expanding a new payload
+                    self.collapsed_json_lines.clear();
                 }
+                Task::none()
+            }
+            Message::ToggleJsonSection(line_index) => {
+                if self.collapsed_json_lines.contains(&line_index) {
+                    self.collapsed_json_lines.remove(&line_index);
+                } else {
+                    self.collapsed_json_lines.insert(line_index);
+                }
+                // No need to explicitly call UpdatePayload, Iced should redraw
                 Task::none()
             }
             Message::ClearPayloads => {
@@ -247,7 +260,8 @@ impl App {
                 components::payload_list(
                     &self.storage,
                     self.expanded_payload_id.as_ref(),
-                    &self.theme()
+                    &self.theme(),
+                    &self.collapsed_json_lines, // Pass the collapsed lines state
                 ),
                 row![horizontal_space()]
                     .align_y(Bottom)

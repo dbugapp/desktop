@@ -7,6 +7,7 @@ use core::time::Duration;
 use iced::widget::{button, column, container, row, scrollable, stack, svg, text};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
+use std::collections::HashSet;
 
 /// Converts a timestamp ID into a human-readable relative time string
 fn human_readable_time(id: &str) -> String {
@@ -23,6 +24,7 @@ pub fn payload_list<'a>(
     storage: &Storage,
     expanded_id: Option<&String>,
     theme: &Theme,
+    collapsed_json_lines: &HashSet<usize>,
 ) -> Element<'a, Message> {
     let storage_rows = column(
         storage
@@ -37,7 +39,11 @@ pub fn payload_list<'a>(
                     let pretty_json = serde_json::to_string_pretty(value).unwrap_or_else(|_| format!("{value:?}"));
 
                     // Use syntax highlighting for JSON with the current theme
-                    let highlighted_json = highlight_json(&pretty_json, theme);
+                    let highlighted_json = highlight_json(
+                        &pretty_json,
+                        theme,
+                        collapsed_json_lines,
+                    );
 
                     let close_svg = svg(svg::Handle::from_memory(
                         include_bytes!("../../assets/icons/mdi--close.svg").as_slice(),

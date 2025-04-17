@@ -50,7 +50,7 @@ fn calculate_collapse_counts(lines: &[String]) -> HashMap<usize, usize> {
         if starts_closing {
             indent_level = indent_level.saturating_sub(1);
             // Check if this closing character matches the indent level of the last opened block
-            if let Some((start_idx, start_indent)) = block_starts.last() {
+            if let Some((_start_idx, start_indent)) = block_starts.last() {
                 if indent_level == *start_indent {
                     // Matched the block, pop it from the stack
                     let popped_start_idx = block_starts.pop().unwrap().0;

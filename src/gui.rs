@@ -37,8 +37,8 @@ struct App {
     show_modal: bool,
     settings: Settings,
     storage: Storage,
-    expanded_payload_id: Option<String>, // Track which payload is currently expanded
-    collapsed_json_lines: HashSet<usize>, // Track collapsed lines in the expanded payload
+    expanded_payload_id: Option<String>,
+    collapsed_json_lines: HashSet<usize>,
 }
 
 impl Default for App {
@@ -51,7 +51,7 @@ impl Default for App {
             settings: Settings::load(),
             storage,
             expanded_payload_id: newest_payload_id,
-            collapsed_json_lines: HashSet::new(), // Initialize the set
+            collapsed_json_lines: HashSet::new(),
         }
     }
 }
@@ -65,10 +65,10 @@ pub(crate) enum Message {
     Event(Event),
     Server(ServerMessage),
     ThemeChanged(usize),
-    TogglePayload(String), // Toggle expansion of a payload by its ID
-    ToggleJsonSection(usize), // Add this message variant
-    ClearPayloads,         // Clear all payloads
-    DeletePayload(String), // Delete a payload by its ID
+    TogglePayload(String),
+    ToggleJsonSection(usize),
+    ClearPayloads,
+    DeletePayload(String),
     WindowMoved(iced::Point),
     WindowResized(iced::Size),
     WindowClosed,
@@ -92,19 +92,15 @@ impl App {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Server(server_message) => {
-                // println!("{server_message:?}");
                 match server_message {
                     ServerMessage::PayloadReceived(value) => {
                         if let Err(e) = self.storage.add_json(&value) {
                             eprintln!("Failed to store payload: {e}");
                         }
-                        // Immediately expand the newly added payload
                         self.expanded_payload_id =
                             self.storage.get_all().first().map(|(id, _)| id.clone());
-                        // Clear collapsed lines for the new payload
                         self.collapsed_json_lines.clear();
 
-                        // Scroll to top to ensure new payload is visible
                         widget::scrollable::scroll_to(
                             widget::scrollable::Id::new("payload_scroll"),
                             AbsoluteOffset { x: 0.0, y: 0.0 },
@@ -130,13 +126,10 @@ impl App {
                 Task::none()
             }
             Message::TogglePayload(id) => {
-                // If this is the currently expanded payload, collapse it
                 if self.expanded_payload_id.as_ref() == Some(&id) {
                     self.expanded_payload_id = None;
                 } else {
-                    // Otherwise, expand this payload and collapse any other
                     self.expanded_payload_id = Some(id);
-                    // Clear collapsed lines when expanding a new payload
                     self.collapsed_json_lines.clear();
                 }
                 Task::none()
@@ -147,7 +140,6 @@ impl App {
                 } else {
                     self.collapsed_json_lines.insert(line_index);
                 }
-                // No need to explicitly call UpdatePayload, Iced should redraw
                 Task::none()
             }
             Message::ClearPayloads => {
@@ -261,7 +253,7 @@ impl App {
                     &self.storage,
                     self.expanded_payload_id.as_ref(),
                     &self.theme(),
-                    &self.collapsed_json_lines, // Pass the collapsed lines state
+                    &self.collapsed_json_lines,
                 ),
                 row![horizontal_space()]
                     .align_y(Bottom)
@@ -271,10 +263,7 @@ impl App {
         );
 
         if self.show_modal {
-            // Get the current theme
             let current_theme = self.theme();
-
-            // Use the settings modal component
             let settings_content = components::settings_modal(current_theme);
 
             components::modal(content, settings_content, Message::HideModal)

@@ -35,8 +35,7 @@ fn calculate_collapse_counts(lines: &[String]) -> HashMap<usize, usize> {
     // Stores the starting line index and the indentation level at that point
     let mut block_starts: Vec<(usize, usize)> = Vec::new();
 
-    for idx in 0..lines.len() {
-        let line_str = &lines[idx];
+    for (idx, line_str) in lines.iter().enumerate() {
         let trimmed = line_str.trim();
 
         // Check if the line starts with a closing character or ends with an opening one
@@ -123,7 +122,7 @@ pub fn highlight_json(
         let mut tokens = Vec::new();
 
         // Tokenize the line (only if not collapsed and needs rendering)
-        if !(is_collapsed && is_collapsible) || !trimmed_line.is_empty() {
+        if !(is_collapsed && is_collapsible && trimmed_line.is_empty()) {
             for c in trimmed_line.chars() {
                 if c == '"' {
                     if in_string {
@@ -204,7 +203,6 @@ pub fn highlight_json(
                 .size(12)
                 .style(move |theme: &Theme| iced::widget::text::Style {
                     color: Some(theme.extended_palette().background.strong.color),
-                    ..Default::default()
                 })
                 .width(30),
             text(" ".repeat(current_indent * indent_size)), // Use current_indent
@@ -220,7 +218,7 @@ pub fn highlight_json(
                 // Create the count indicator: { N lines } or [ N lines ]
                 // Note: The opening brace/bracket is already part of row_element
                 let count_indicator = row![
-                    text(format!(" {} lines ", count))
+                    text(format!(" {count} lines "))
                         .style(move |_| iced::widget::text::Style { color: Some(count_color) }),
                     text(closing_char)
                         .style(move |_| iced::widget::text::Style { color: Some(token_color) })

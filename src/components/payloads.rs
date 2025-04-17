@@ -1,13 +1,13 @@
 use crate::components::json_highlight::highlight_json;
 use crate::components::styles;
-use crate::gui::Message;
-use crate::storage::Storage;
+use crate::app::Message;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
 use iced::widget::{button, column, container, row, scrollable, stack, svg, text};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
 use std::collections::HashSet;
+use serde_json::Value;
 
 /// Converts a timestamp ID into a human-readable relative time string
 fn human_readable_time(id: &str) -> String {
@@ -19,23 +19,25 @@ fn human_readable_time(id: &str) -> String {
 
 }
 
-/// Creates a scrollable display of all received JSON payloads
+/// Creates a scrollable display of received JSON payloads using cached data
 pub fn payload_list<'a>(
-    storage: &Storage,
+    payloads: &'a [(String, Value)],
     expanded_id: Option<&String>,
     theme: &Theme,
     collapsed_json_lines: &HashSet<usize>,
 ) -> Element<'a, Message> {
     let storage_rows = column(
-        storage
-            .get_all()
+        payloads
             .iter()
             .map(|(id, value)| {
                 let is_expanded = expanded_id == Some(id);
                 let timestamp = human_readable_time(id);
 
                 if is_expanded {
-                    let pretty_json = serde_json::to_string_pretty(value).unwrap_or_else(|_| format!("{value:?}"));
+                    let pretty_json = serde_json::to_string_pretty(value).unwrap_or_else(|err| {
+                        eprintln!("Error prettifying payload {id}: {err}");
+                        format!("{{ \"error\": \"Failed to render JSON: {err}\" }}")
+                    });
 
                     let highlighted_json = highlight_json(
                         &pretty_json,

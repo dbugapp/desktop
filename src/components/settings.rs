@@ -1,4 +1,4 @@
-use crate::gui::Message;
+use crate::app::Message;
 use iced::widget::{column, container, radio, scrollable, text};
 use iced::{Element, Fill, Theme};
 
@@ -12,7 +12,7 @@ pub fn settings_modal<'a>(current_theme: Theme) -> Element<'a, Message> {
 
     container(
         column![
-            text("Select Theme").size(18).style(move |_theme| {
+            text("Select Theme").size(18).style(move |_theme: &Theme| {
                 text::Style {
                     color: current_theme.palette().text.into(),
                 }

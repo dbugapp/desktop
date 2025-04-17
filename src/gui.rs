@@ -2,16 +2,15 @@ use iced::event::Event;
 use iced::keyboard::key;
 use iced::widget::scrollable::AbsoluteOffset;
 use iced::{keyboard, window, Length, Theme};
-use std::collections::HashSet;
 
 use crate::components;
 use crate::components::styles;
-use crate::gui::Message::Server;
+use crate::app::{App, Message};
+use crate::app::Message::Server;
 use crate::server;
 use crate::server::ServerMessage;
 use crate::settings::Settings;
-use crate::storage::Storage;
-use iced::widget::{self, button, column, container, horizontal_space, row, svg};
+use iced::widget::{self, button, column, container, horizontal_space, row, svg, text};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
 /// Initializes and runs the GUI application
@@ -30,48 +29,6 @@ pub fn gui() -> iced::Result {
             ..window::Settings::default()
         })
         .run()
-}
-
-/// Application state and logic
-struct App {
-    show_modal: bool,
-    settings: Settings,
-    storage: Storage,
-    expanded_payload_id: Option<String>,
-    collapsed_json_lines: HashSet<usize>,
-}
-
-impl Default for App {
-    fn default() -> Self {
-        let storage = Storage::new().expect("Failed to initialize storage");
-        let newest_payload_id = storage.get_all().first().map(|(id, _)| id.clone());
-
-        Self {
-            show_modal: false,
-            settings: Settings::load(),
-            storage,
-            expanded_payload_id: newest_payload_id,
-            collapsed_json_lines: HashSet::new(),
-        }
-    }
-}
-
-/// Messages used for application state updates
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub(crate) enum Message {
-    ShowModal,
-    HideModal,
-    Event(Event),
-    Server(ServerMessage),
-    ThemeChanged(usize),
-    TogglePayload(String),
-    ToggleJsonSection(usize),
-    ClearPayloads,
-    DeletePayload(String),
-    WindowMoved(iced::Point),
-    WindowResized(iced::Size),
-    WindowClosed,
 }
 
 impl App {
@@ -94,17 +51,21 @@ impl App {
             Server(server_message) => {
                 match server_message {
                     ServerMessage::PayloadReceived(value) => {
+                        let scroll_command;
                         if let Err(e) = self.storage.add_json(&value) {
                             eprintln!("Failed to store payload: {e}");
-                        }
-                        self.expanded_payload_id =
-                            self.storage.get_all().first().map(|(id, _)| id.clone());
-                        self.collapsed_json_lines.clear();
+                            scroll_command = Task::none();
+                        } else {
+                            self.payload_list_cache = self.storage.get_all();
+                            self.expanded_payload_id = self.payload_list_cache.first().map(|(id, _)| id.clone());
+                            self.collapsed_json_lines.clear();
 
-                        widget::scrollable::scroll_to(
-                            widget::scrollable::Id::new("payload_scroll"),
-                            AbsoluteOffset { x: 0.0, y: 0.0 },
-                        )
+                            scroll_command = widget::scrollable::scroll_to::<Message>(
+                                widget::scrollable::Id::new("payload_scroll"),
+                                AbsoluteOffset { x: 0.0, y: 0.0 },
+                            );
+                        }
+                        scroll_command
                     }
                 }
             }
@@ -129,31 +90,54 @@ impl App {
                 if self.expanded_payload_id.as_ref() == Some(&id) {
                     self.expanded_payload_id = None;
                 } else {
-                    self.expanded_payload_id = Some(id);
-                    self.collapsed_json_lines.clear();
+                    if let Some(_old_id) = self.expanded_payload_id.take() {
+                         // No cache to update
+                         // self.update_highlight_cache(&old_id);
+                    }
+                    self.expanded_payload_id = Some(id.clone());
+                    // self.update_highlight_cache(&id);
                 }
                 Task::none()
             }
             Message::ToggleJsonSection(line_index) => {
-                if self.collapsed_json_lines.contains(&line_index) {
-                    self.collapsed_json_lines.remove(&line_index);
-                } else {
-                    self.collapsed_json_lines.insert(line_index);
-                }
+                 if let Some(_payload_id) = self.expanded_payload_id.clone() {
+                    if self.collapsed_json_lines.contains(&line_index) {
+                        self.collapsed_json_lines.remove(&line_index);
+                    } else {
+                        self.collapsed_json_lines.insert(line_index);
+                    }
+                    // No cache to update
+                    // self.update_highlight_cache(&payload_id);
+                 } else {
+                     eprintln!("WARN: ToggleJsonSection called with no expanded payload");
+                 }
                 Task::none()
             }
             Message::ClearPayloads => {
                 if let Err(e) = self.storage.delete_all() {
                     eprintln!("Failed to clear payloads: {e}");
+                } else {
+                    self.payload_list_cache.clear();
+                    self.expanded_payload_id = None;
+                    self.collapsed_json_lines.clear();
                 }
                 Task::none()
             }
             Message::DeletePayload(id) => {
-                if let Err(e) = self.storage._delete(&id) {
-                    eprintln!("Failed to delete payload: {e}");
-                }
-                if self.expanded_payload_id.as_ref() == Some(&id) {
-                    self.expanded_payload_id = None;
+                let deleted = match self.storage.delete(&id) {
+                    Ok(d) => d,
+                    Err(e) => {
+                        eprintln!("Failed to delete payload: {e}");
+                        false
+                    }
+                };
+
+                if deleted {
+                    self.payload_list_cache.retain(|(item_id, _)| item_id != &id);
+                    if self.expanded_payload_id.as_ref() == Some(&id) {
+                        self.expanded_payload_id = None;
+                    }
+                    self.collapsed_json_lines.clear();
                 }
                 Task::none()
             }
@@ -180,16 +164,26 @@ impl App {
             },
             Message::WindowMoved(position) => {
                 self.settings.set_window_position(position);
-                let _ = self.settings.save();
+                // Save immediately on move
+                if let Err(e) = self.settings.save() {
+                    eprintln!("ERROR: Failed to save settings on move: {e}");
+                }
                 Task::none()
             }
             Message::WindowResized(size) => {
                 self.settings.set_window_size(size);
-                let _ = self.settings.save();
+                 // Save immediately on resize
+                if let Err(e) = self.settings.save() {
+                    eprintln!("ERROR: Failed to save settings on resize: {e}");
+                }
                 Task::none()
             }
             Message::WindowClosed => {
-                let _ = self.settings.save();
+                // Attempt a final save on close, but don't rely on it solely.
+                if let Err(e) = self.settings.save() {
+                    // Log quietly if needed, but main saves happen earlier.
+                    eprintln!("Note: Final settings save on close failed: {e}");
+                }
                 iced::exit()
             }
         }
@@ -224,6 +218,7 @@ impl App {
         .height(Fill);
 
         let button_size = 25;
+        let payload_count = self.payload_list_cache.len();
 
         let content = container(
             column![
@@ -233,6 +228,8 @@ impl App {
                         .height(button_size)
                         .padding(3.0),
                     horizontal_space(),
+                    text(format!("{payload_count}"))
+                        .size(14),
                     button(remove_all_svg)
                         .style(button::danger)
                         .width(button_size)
@@ -248,9 +245,10 @@ impl App {
                 ]
                 .padding(10)
                 .spacing(10)
+                .align_y(iced::alignment::Vertical::Center)
                 .height(Length::Shrink),
                 components::payload_list(
-                    &self.storage,
+                    &self.payload_list_cache,
                     self.expanded_payload_id.as_ref(),
                     &self.theme(),
                     &self.collapsed_json_lines,
@@ -271,9 +269,7 @@ impl App {
             content.into()
         }
     }
-}
 
-impl App {
     /// Hides the modal dialog
     fn hide_modal(&mut self) {
         self.show_modal = false;

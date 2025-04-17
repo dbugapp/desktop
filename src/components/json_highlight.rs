@@ -119,6 +119,11 @@ pub fn highlight_json(
                         // Delimiter logic below will set is_key if appropriate
                     } else if !in_string {
                         // Start of string
+                        // Push any pending non-string token before starting the string
+                        if !current_token.is_empty() { // Simplified check
+                            tokens.push((current_token.clone(), is_key, false));
+                            current_token.clear();
+                        }
                         in_string = true;
                         // Don't add the quote to current_token
                     } else {
@@ -137,13 +142,13 @@ pub fn highlight_json(
                     // Regular character inside string
                     current_token.push(c);
                 } else {
-                    // Character outside string - handle delimiters, numbers, etc.
-                    // Push any accumulated token before handling the delimiter/char
-                    if !current_token.trim().is_empty() {
+                    // Character outside string
+                    // Push any accumulated non-string token before handling the delimiter/char
+                    if !current_token.is_empty() { // Simplified check
                         tokens.push((current_token.clone(), is_key, false));
                         current_token.clear();
                     }
-                    // Handle the current character c
+                    // Handle the current delimiter or start of a new non-string token
                     if ['{', '}', '[', ']', ':', ','].contains(&c) {
                         tokens.push((c.to_string(), false, false));
                         if c == ',' || c == '{' || c == '[' {
@@ -159,8 +164,8 @@ pub fn highlight_json(
                 }
                 prev_char = c; // Update prev_char for the next iteration
             }
-            // After the loop, push any remaining token (e.g., trailing number/bool)
-            if !current_token.trim().is_empty() {
+            // After the loop, push any remaining token
+            if !current_token.is_empty() { // Simplified check
                 tokens.push((current_token, is_key, false));
             }
         }

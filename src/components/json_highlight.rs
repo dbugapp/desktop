@@ -1,7 +1,7 @@
 use crate::gui::Message;
-use iced::widget::{column, row, text, button, svg};
+use iced::widget::{column, row, text, button, svg, horizontal_space};
 use iced::{Color, Element, Theme};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use crate::components::styles;
 
 fn color_for_token(token: &str, is_key: bool, in_string: bool, theme: &Theme) -> Color {
@@ -26,12 +26,65 @@ fn color_for_token(token: &str, is_key: bool, in_string: bool, theme: &Theme) ->
     }
 }
 
+/// Calculates the number of lines hidden within each collapsible block.
+/// Returns a map where the key is the starting line index of a block
+/// and the value is the count of lines contained within that block.
+fn calculate_collapse_counts(lines: &[String]) -> HashMap<usize, usize> {
+    let mut collapse_counts = HashMap::new();
+    let mut indent_level: usize = 0;
+    // Stores the starting line index and the indentation level at that point
+    let mut block_starts: Vec<(usize, usize)> = Vec::new();
+
+    for idx in 0..lines.len() {
+        let line_str = &lines[idx];
+        let trimmed = line_str.trim();
+
+        // Check if the line starts with a closing character or ends with an opening one
+        let starts_closing = trimmed.starts_with('}') || trimmed.starts_with(']');
+        let ends_opening = trimmed.ends_with('{') || trimmed.ends_with('[');
+
+        // Store the indent level *before* potentially adjusting it for the current line
+        let indent_before_line = indent_level;
+
+        // If the line starts with a closing character, decrease indent level
+        if starts_closing {
+            indent_level = indent_level.saturating_sub(1);
+            // Check if this closing character matches the indent level of the last opened block
+            if let Some((start_idx, start_indent)) = block_starts.last() {
+                if indent_level == *start_indent {
+                    // Matched the block, pop it from the stack
+                    let popped_start_idx = block_starts.pop().unwrap().0;
+                    // Calculate lines *between* start (exclusive) and end (exclusive)
+                    let line_count = idx.saturating_sub(popped_start_idx).saturating_sub(1);
+                    // Store the count, keyed by the starting line index
+                    collapse_counts.insert(popped_start_idx, line_count);
+                }
+            }
+        }
+
+        // If the line ends with an opening character (and it's not the first line),
+        // record it as a potential start of a collapsible block.
+        // Use the indent level *before* this line was processed.
+        if ends_opening && idx != 0 {
+            block_starts.push((idx, indent_before_line));
+        }
+
+        // If the line ends with an opening character, increase indent level for the next line
+        if ends_opening {
+            indent_level += 1;
+        }
+    }
+    collapse_counts
+}
+
 pub fn highlight_json(
     json: &str,
     theme: &Theme,
     collapsed_lines: &HashSet<usize>,
 ) -> Element<'static, Message> {
     let lines = json.lines().map(|line| line.to_owned()).collect::<Vec<_>>();
+    // Pre-calculate the number of lines within each collapsible block
+    let collapse_counts = calculate_collapse_counts(&lines);
 
     let mut elements = Vec::new();
     let mut indent_level: usize = 0;
@@ -156,8 +209,12 @@ pub fn highlight_json(
                 .width(30),
             text(" ".repeat(current_indent * indent_size)), // Use current_indent
             if is_collapsible && is_collapsed {
-                // Show placeholder for collapsed content
-                row![row_element, text("...")]
+                // Get the pre-calculated line count for this collapsed section
+                let count = collapse_counts.get(&idx).copied().unwrap_or(0);
+                // Show placeholder with line count
+                row![row_element, text(format!(" ... {} lines ...", count))
+                    .style(move |theme: &Theme| iced::widget::text::Style { color: Some(theme.extended_palette().background.strong.color), ..Default::default() })
+                ]
             } else {
                 row_element
             }

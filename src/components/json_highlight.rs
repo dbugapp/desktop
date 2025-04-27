@@ -1,6 +1,6 @@
 use crate::app::Message;
 use iced::widget::{column, row, text, button, svg};
-use iced::{Element, Theme};
+use iced::{Element, Theme, Center};
 use std::collections::{HashMap, HashSet};
 use crate::components::styles;
 use iced::widget::container;
@@ -271,6 +271,7 @@ pub fn highlight_json(
                 .style(move |_theme: &Theme| iced::widget::text::Style {
                     color: Some(line_number_color),
                 })
+            .size(11)
                 .width(30),
             text(" ".repeat(current_indent * indent_size)),
             if is_collapsible && is_collapsed {
@@ -293,7 +294,7 @@ pub fn highlight_json(
             } else {
                 row_element
             }
-        ];
+        ].align_y(Center);
 
         let row_container = container(indented_row);
         let styled_row = if is_match {

@@ -4,7 +4,7 @@ use crate::components::styles;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
 use iced::widget::{button, column, container, row, scrollable, stack, svg, text, text_input};
-use iced::{Element, Fill, Theme};
+use iced::{Element, Fill, Theme, Center};
 use millisecond::prelude::*;
 use serde_json::Value;
 use std::collections::HashSet;
@@ -99,6 +99,7 @@ pub fn payload_list<'a>(
                                         .padding(0)
                                         .on_press(Message::TogglePayload(id.clone()))
                                 ]
+                                .align_y(Center)
                                 .spacing(5)
                             )
                             .padding(10)

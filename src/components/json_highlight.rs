@@ -53,15 +53,16 @@ pub fn highlight_json(
     let lines = json.lines().map(|line| line.to_owned()).collect::<Vec<_>>();
     let collapse_counts = calculate_collapse_counts(&lines);
     let palette = theme.extended_palette();
-    let background_strong_color = palette.background.strong.color;
-    let secondary_base_text_color = palette.secondary.base.text;
-    let primary_strong_color = palette.primary.strong.color;
-    let background_weak_color = palette.background.weak.color;
-    let secondary_base_color = palette.secondary.base.color;
-    let success_weak_color = palette.success.weak.color;
-    let primary_weak_color = palette.primary.weak.color;
-    let search_highlight_color = palette.background.weak.color;
-    let search_text_color = palette.success.strong.color;
+    let line_number_color = palette.background.strong.color;
+    let key_color = palette.secondary.base.text;
+    let string_value_color = palette.primary.strong.color;
+    let bracket_color = palette.background.weak.color;
+    let colon_color = palette.secondary.base.color;
+    let number_color = palette.success.weak.color;
+    let other_value_color = palette.primary.weak.color;
+    let comma_color = palette.background.strong.color;
+    let search_highlight_bg = palette.background.weak.color;
+    let search_match_text_color = palette.success.strong.color;
 
     let mut elements = Vec::new();
     let mut indent_level: usize = 0;
@@ -170,20 +171,20 @@ pub fn highlight_json(
                     // Determine original syntax color
                     let original_color = if in_string {
                         if is_key {
-                            secondary_base_text_color
+                            key_color
                         } else {
-                            primary_strong_color
+                            string_value_color
                         }
                     } else {
                         match token.as_str() {
-                            "{" | "}" => background_weak_color,
-                            "[" | "]" => background_weak_color,
-                            ":" => secondary_base_color,
-                            "," => background_strong_color,
+                            "{" | "}" => bracket_color,
+                            "[" | "]" => bracket_color,
+                            ":" => colon_color,
+                            "," => comma_color,
                             _ if token.trim().parse::<f64>().is_ok() => {
-                                success_weak_color
+                                number_color
                             }
-                            _ => primary_weak_color,
+                            _ => other_value_color,
                         }
                     };
 
@@ -209,7 +210,7 @@ pub fn highlight_json(
                             token_elements.push(
                                 text(matched) // Pass owned String
                                     // Apply search text color to the matched part
-                                    .style(move |_| iced::widget::text::Style { color: Some(search_text_color) })
+                                    .style(move |_| iced::widget::text::Style { color: Some(search_match_text_color) })
                                     .into()
                             );
                             if !after.is_empty() {
@@ -268,7 +269,7 @@ pub fn highlight_json(
             collapse_element,
             text(format!("{:>3} ", idx + 1))
                 .style(move |_theme: &Theme| iced::widget::text::Style {
-                    color: Some(background_strong_color),
+                    color: Some(line_number_color),
                 })
                 .width(30),
             text(" ".repeat(current_indent * indent_size)),
@@ -276,10 +277,10 @@ pub fn highlight_json(
                 let count = collapse_counts.get(&idx).copied().unwrap_or(0);
                 let closing_char = if trimmed_line.ends_with('{') { "}" } else { "]" };
                 let token_color = match closing_char {
-                    "}" | "]" => background_weak_color,
-                     _ => primary_weak_color,
+                    "}" | "]" => bracket_color,
+                     _ => other_value_color,
                 };
-                let count_color = background_strong_color;
+                let count_color = line_number_color;
 
                 let count_indicator = row![
                     text(format!(" {count} lines "))
@@ -297,7 +298,7 @@ pub fn highlight_json(
         let row_container = container(indented_row);
         let styled_row = if is_match {
             row_container.style(move |_: &Theme| container::Style {
-                background: Some(Background::Color(search_highlight_color)),
+                background: Some(Background::Color(search_highlight_bg)),
                 ..Default::default()
             })
         } else {

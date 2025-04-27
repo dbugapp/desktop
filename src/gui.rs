@@ -95,6 +95,8 @@ impl App {
                          // self.update_highlight_cache(&old_id);
                     }
                     self.expanded_payload_id = Some(id.clone());
+                    self.search_query.clear(); // Clear search on payload change
+                    self.collapsed_json_lines.clear(); // Also clear collapsed sections
                     // self.update_highlight_cache(&id);
                 }
                 Task::none()
@@ -120,6 +122,7 @@ impl App {
                     self.payload_list_cache.clear();
                     self.expanded_payload_id = None;
                     self.collapsed_json_lines.clear();
+                    self.search_query.clear(); // Clear search when all payloads are cleared
                 }
                 Task::none()
             }
@@ -135,7 +138,9 @@ impl App {
                 if deleted {
                     self.payload_list_cache.retain(|(item_id, _)| item_id != &id);
                     if self.expanded_payload_id.as_ref() == Some(&id) {
+                        // If the currently viewed payload was deleted, clear search
                         self.expanded_payload_id = None;
+                        self.search_query.clear(); 
                     }
                     self.collapsed_json_lines.clear();
                 }

@@ -85,7 +85,7 @@ pub fn payload_list<'a>(
                                         .width(Fill),
                                     text_input("Search...", search_query).width(150.0)
                                         .on_input(Message::SearchQueryChanged)
-                                        .size(14)
+                                        .size(12)
                                         .padding(2),
                                     button(delete_svg)
                                         .style(button::danger)

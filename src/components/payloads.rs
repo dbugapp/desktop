@@ -1,22 +1,24 @@
+use crate::app::Message;
 use crate::components::json_highlight::highlight_json;
 use crate::components::styles;
-use crate::app::Message;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
 use iced::widget::{button, column, container, row, scrollable, stack, svg, text};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
-use std::collections::HashSet;
 use serde_json::Value;
+use std::collections::HashSet;
 
 /// Converts a timestamp ID into a human-readable relative time string
 fn human_readable_time(id: &str) -> String {
-
     id.parse::<i64>()
         .ok()
         .and_then(DateTime::<Utc>::from_timestamp_millis)
-        .map(|time| Utc::now().signed_duration_since(time)).map_or_else(|| "Invalid timestamp".to_string(), |duration| Duration::from_millis(duration.num_milliseconds() as u64).relative())
-
+        .map(|time| Utc::now().signed_duration_since(time))
+        .map_or_else(
+            || "Invalid timestamp".to_string(),
+            |duration| Duration::from_millis(duration.num_milliseconds() as u64).relative(),
+        )
 }
 
 /// Creates a scrollable display of received JSON payloads using cached data
@@ -39,11 +41,8 @@ pub fn payload_list<'a>(
                         format!("{{ \"error\": \"Failed to render JSON: {err}\" }}")
                     });
 
-                    let highlighted_json = highlight_json(
-                        &pretty_json,
-                        theme,
-                        collapsed_json_lines,
-                    );
+                    let highlighted_json =
+                        highlight_json(&pretty_json, theme, collapsed_json_lines);
 
                     let close_svg = svg(svg::Handle::from_memory(
                         include_bytes!("../../assets/icons/mdi--caret-down.svg").as_slice(),
@@ -59,27 +58,38 @@ pub fn payload_list<'a>(
                     .height(Fill)
                     .style(styles::svg_style_primary);
 
+                    // scrollable(
                     container(
                         stack![
-                            highlighted_json,
-                            container(row![
-                                container(text(timestamp).size(10.0))
-                                    .padding(3.0)
-                                    .align_x(iced::alignment::Horizontal::Right)
-                                    .align_y(iced::alignment::Vertical::Bottom)
-                                    .width(Fill),
-                                button(delete_svg)
-                                    .style(button::danger)
-                                    .width(18)
-                                    .height(18)
-                                    .padding(1)
-                                    .on_press(Message::DeletePayload(id.clone())),
-                                button(close_svg)
-                                    .width(18)
-                                    .height(18)
-                                    .padding(0)
-                                    .on_press(Message::TogglePayload(id.clone()))
-                            ].spacing(5))
+                            container(
+                                scrollable(highlighted_json)
+                                    .direction(scrollable::Direction::Vertical(
+                                        scrollable::Scrollbar::new().width(5).scroller_width(5),
+                                    ))
+                                    .width(Fill)
+                            )
+                            .max_height(300.0),
+                            container(
+                                row![
+                                    container(text(timestamp).size(10.0))
+                                        .padding(3.0)
+                                        .align_x(iced::alignment::Horizontal::Right)
+                                        .align_y(iced::alignment::Vertical::Bottom)
+                                        .width(Fill),
+                                    button(delete_svg)
+                                        .style(button::danger)
+                                        .width(18)
+                                        .height(18)
+                                        .padding(1)
+                                        .on_press(Message::DeletePayload(id.clone())),
+                                    button(close_svg)
+                                        .width(18)
+                                        .height(18)
+                                        .padding(0)
+                                        .on_press(Message::TogglePayload(id.clone()))
+                                ]
+                                .spacing(5)
+                            )
                             .align_top(Fill)
                             .align_right(Fill)
                             .width(Fill),
@@ -90,6 +100,15 @@ pub fn payload_list<'a>(
                     .width(Fill)
                     .style(styles::container_code)
                     .into()
+                    /*
+                    )
+                        .direction(scrollable::Direction::Vertical(
+                            scrollable::Scrollbar::new().width(5).scroller_width(5),
+                        ))
+                        .width(Fill)
+                        .height(600.0)
+                        .into()
+                         */
                 } else {
                     let expand_svg = svg(svg::Handle::from_memory(
                         include_bytes!("../../assets/icons/mdi--caret-up.svg").as_slice(),
@@ -108,7 +127,8 @@ pub fn payload_list<'a>(
                     button(
                         container(
                             row![
-                                container(text(format!("{value}")).size(14).height(18.0)).width(Fill),
+                                container(text(format!("{value}")).size(14).height(18.0))
+                                    .width(Fill),
                                 container(text(timestamp).size(10.0))
                                     .padding(4.0)
                                     .align_x(iced::alignment::Horizontal::Right)
@@ -119,16 +139,13 @@ pub fn payload_list<'a>(
                                     .height(18)
                                     .padding(1)
                                     .on_press(Message::DeletePayload(id.clone())),
-                                button(expand_svg)
-                                    .width(18)
-                                    .height(18)
-                                    .padding(0)
+                                button(expand_svg).width(18).height(18).padding(0)
                             ]
-                            .spacing(5)
+                            .spacing(5),
                         )
                         .padding(10)
                         .width(Fill)
-                        .style(styles::container_code_closed)
+                        .style(styles::container_code_closed),
                     )
                     .style(button::text)
                     .width(Fill)

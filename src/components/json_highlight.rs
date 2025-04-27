@@ -60,8 +60,8 @@ pub fn highlight_json(
     let secondary_base_color = palette.secondary.base.color;
     let success_weak_color = palette.success.weak.color;
     let primary_weak_color = palette.primary.weak.color;
-    let search_highlight_color = palette.secondary.base.color;
-    let search_text_color = palette.warning.strong.color;
+    let search_highlight_color = palette.background.weak.color;
+    let search_text_color = palette.success.strong.color;
 
     let mut elements = Vec::new();
     let mut indent_level: usize = 0;
@@ -166,8 +166,9 @@ pub fn highlight_json(
         let row_element = row(
             tokens
                 .into_iter()
-                .map(|(token, is_key, in_string)| {
-                    let color = if in_string {
+                .flat_map(|(token, is_key, in_string)| { // Use flat_map to handle multiple elements per token
+                    // Determine original syntax color
+                    let original_color = if in_string {
                         if is_key {
                             secondary_base_text_color
                         } else {
@@ -185,11 +186,58 @@ pub fn highlight_json(
                             _ => primary_weak_color,
                         }
                     };
-                    text(token)
-                        .style(move |_| iced::widget::text::Style { color: Some(color) })
-                        .into()
+
+                    let mut token_elements = Vec::new();
+
+                    // Check for search match (case-insensitive)
+                    if !search_query.is_empty() {
+                        if let Some(match_start_lowercase) = token.to_lowercase().find(&search_query.to_lowercase()) {
+                            let match_end_lowercase = match_start_lowercase + search_query.len();
+
+                            // Extract parts based on original token casing and convert to owned Strings
+                            let before = token[..match_start_lowercase].to_string();
+                            let matched = token[match_start_lowercase..match_end_lowercase].to_string();
+                            let after = token[match_end_lowercase..].to_string();
+
+                            if !before.is_empty() {
+                                token_elements.push(
+                                    text(before) // Pass owned String
+                                        .style(move |_| iced::widget::text::Style { color: Some(original_color) })
+                                        .into()
+                                );
+                            }
+                            token_elements.push(
+                                text(matched) // Pass owned String
+                                    // Apply search text color to the matched part
+                                    .style(move |_| iced::widget::text::Style { color: Some(search_text_color) })
+                                    .into()
+                            );
+                            if !after.is_empty() {
+                                token_elements.push(
+                                    text(after) // Pass owned String
+                                        .style(move |_| iced::widget::text::Style { color: Some(original_color) })
+                                        .into()
+                                );
+                            }
+                        } else {
+                            // No match in this token, pass owned String
+                            token_elements.push(
+                                text(token.to_string()) // Pass owned String
+                                    .style(move |_| iced::widget::text::Style { color: Some(original_color) })
+                                    .into()
+                            );
+                        }
+                    } else {
+                        // Search query is empty, pass owned String
+                        token_elements.push(
+                            text(token.to_string()) // Pass owned String
+                                .style(move |_| iced::widget::text::Style { color: Some(original_color) })
+                                .into()
+                        );
+                    }
+                    token_elements // Return Vec<Element> for flat_map
                 })
-                .collect::<Vec<Element<'_, Message>>>(),
+                .collect::<Vec<Element<'_, Message>>>(), // Collect the flattened elements
         );
 
         let collapse_button_icon = if is_collapsible {
@@ -219,7 +267,6 @@ pub fn highlight_json(
         let indented_row = row![
             collapse_element,
             text(format!("{:>3} ", idx + 1))
-                .size(12)
                 .style(move |_theme: &Theme| iced::widget::text::Style {
                     color: Some(background_strong_color),
                 })

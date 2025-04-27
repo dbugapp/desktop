@@ -186,6 +186,10 @@ impl App {
                 }
                 iced::exit()
             }
+            Message::SearchQueryChanged(query) => {
+                self.search_query = query;
+                Task::none()
+            }
         }
     }
 
@@ -258,6 +262,7 @@ impl App {
                     &self.theme(),
                     &self.collapsed_json_lines,
                     max_payload_height, // Pass calculated max height
+                    &self.search_query, // Pass search query
                 ),
                 row![horizontal_space()]
                     .align_y(Bottom)

@@ -13,6 +13,7 @@ pub(crate) struct App {
     pub(crate) expanded_payload_id: Option<String>,
     pub(crate) collapsed_json_lines: HashSet<usize>,
     pub(crate) payload_list_cache: Vec<(String, Value)>,
+    pub(crate) search_query: String,
 }
 
 impl Default for App {
@@ -28,6 +29,7 @@ impl Default for App {
             expanded_payload_id: newest_payload_id,
             collapsed_json_lines: HashSet::new(),
             payload_list_cache,
+            search_query: String::new(),
         }
     }
 }
@@ -48,4 +50,5 @@ pub(crate) enum Message {
     WindowMoved(iced::Point),
     WindowResized(iced::Size),
     WindowClosed,
+    SearchQueryChanged(String),
 } 

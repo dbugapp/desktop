@@ -3,7 +3,7 @@ use crate::components::json_highlight::highlight_json;
 use crate::components::styles;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
-use iced::widget::{button, column, container, row, scrollable, stack, svg, text};
+use iced::widget::{button, column, container, row, scrollable, stack, svg, text, text_input};
 use iced::{Element, Fill, Theme};
 use millisecond::prelude::*;
 use serde_json::Value;
@@ -28,6 +28,7 @@ pub fn payload_list<'a>(
     theme: &Theme,
     collapsed_json_lines: &HashSet<usize>,
     max_payload_height: f32,
+    search_query: &str,
 ) -> Element<'a, Message> {
     let storage_rows = column(
         payloads
@@ -43,7 +44,7 @@ pub fn payload_list<'a>(
                     });
 
                     let highlighted_json =
-                        highlight_json(&pretty_json, theme, collapsed_json_lines);
+                        highlight_json(&pretty_json, theme, collapsed_json_lines, search_query);
 
                     let close_svg = svg(svg::Handle::from_memory(
                         include_bytes!("../../assets/icons/mdi--caret-down.svg").as_slice(),
@@ -82,6 +83,10 @@ pub fn payload_list<'a>(
                                         .align_x(iced::alignment::Horizontal::Right)
                                         .align_y(iced::alignment::Vertical::Bottom)
                                         .width(Fill),
+                                    text_input("Search...", search_query).width(150.0)
+                                        .on_input(Message::SearchQueryChanged)
+                                        .size(14)
+                                        .padding(2),
                                     button(delete_svg)
                                         .style(button::danger)
                                         .width(18)

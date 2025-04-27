@@ -1,30 +1,10 @@
 use crate::app::Message;
 use iced::widget::{column, row, text, button, svg};
-use iced::{Color, Element, Theme};
+use iced::{Element, Theme};
 use std::collections::{HashMap, HashSet};
 use crate::components::styles;
-
-fn color_for_token(token: &str, is_key: bool, in_string: bool, theme: &Theme) -> Color {
-    let palette = theme.extended_palette();
-    if in_string {
-        if is_key {
-            palette.secondary.base.text
-        } else {
-            palette.primary.strong.color
-        }
-    } else {
-        match token {
-            "{" | "}" => palette.background.weak.color,
-            "[" | "]" => palette.background.weak.color,
-            ":" => palette.secondary.base.color,
-            "," => palette.background.strong.color,
-            _ if token.trim().parse::<f64>().is_ok() => {
-                palette.success.weak.color
-            }
-            _ => palette.primary.weak.color,
-        }
-    }
-}
+use iced::widget::container;
+use iced::Background;
 
 /// Calculates the number of lines hidden within each collapsible block.
 /// Returns a map where the key is the starting line index of a block
@@ -68,9 +48,20 @@ pub fn highlight_json(
     json: &str,
     theme: &Theme,
     collapsed_lines: &HashSet<usize>,
+    search_query: &str,
 ) -> Element<'static, Message> {
     let lines = json.lines().map(|line| line.to_owned()).collect::<Vec<_>>();
     let collapse_counts = calculate_collapse_counts(&lines);
+    let palette = theme.extended_palette();
+    let background_strong_color = palette.background.strong.color;
+    let secondary_base_text_color = palette.secondary.base.text;
+    let primary_strong_color = palette.primary.strong.color;
+    let background_weak_color = palette.background.weak.color;
+    let secondary_base_color = palette.secondary.base.color;
+    let success_weak_color = palette.success.weak.color;
+    let primary_weak_color = palette.primary.weak.color;
+    let search_highlight_color = palette.secondary.base.color;
+    let search_text_color = palette.warning.strong.color;
 
     let mut elements = Vec::new();
     let mut indent_level: usize = 0;
@@ -98,6 +89,8 @@ pub fn highlight_json(
         if trimmed_line.starts_with('}') || trimmed_line.starts_with(']') {
             indent_level = indent_level.saturating_sub(1);
         }
+
+        let is_match = !search_query.is_empty() && line.to_lowercase().contains(&search_query.to_lowercase());
 
         let is_collapsible = (trimmed_line.ends_with('{') || trimmed_line.ends_with('[')) && idx != 0;
         let is_collapsed = collapsed_lines.contains(&idx);
@@ -174,7 +167,24 @@ pub fn highlight_json(
             tokens
                 .into_iter()
                 .map(|(token, is_key, in_string)| {
-                    let color = color_for_token(&token, is_key, in_string, theme);
+                    let color = if in_string {
+                        if is_key {
+                            secondary_base_text_color
+                        } else {
+                            primary_strong_color
+                        }
+                    } else {
+                        match token.as_str() {
+                            "{" | "}" => background_weak_color,
+                            "[" | "]" => background_weak_color,
+                            ":" => secondary_base_color,
+                            "," => background_strong_color,
+                            _ if token.trim().parse::<f64>().is_ok() => {
+                                success_weak_color
+                            }
+                            _ => primary_weak_color,
+                        }
+                    };
                     text(token)
                         .style(move |_| iced::widget::text::Style { color: Some(color) })
                         .into()
@@ -210,16 +220,19 @@ pub fn highlight_json(
             collapse_element,
             text(format!("{:>3} ", idx + 1))
                 .size(12)
-                .style(move |theme: &Theme| iced::widget::text::Style {
-                    color: Some(theme.extended_palette().background.strong.color),
+                .style(move |_theme: &Theme| iced::widget::text::Style {
+                    color: Some(background_strong_color),
                 })
                 .width(30),
             text(" ".repeat(current_indent * indent_size)),
             if is_collapsible && is_collapsed {
                 let count = collapse_counts.get(&idx).copied().unwrap_or(0);
                 let closing_char = if trimmed_line.ends_with('{') { "}" } else { "]" };
-                let token_color = color_for_token(closing_char, false, false, theme);
-                let count_color = theme.extended_palette().background.strong.color;
+                let token_color = match closing_char {
+                    "}" | "]" => background_weak_color,
+                     _ => primary_weak_color,
+                };
+                let count_color = background_strong_color;
 
                 let count_indicator = row![
                     text(format!(" {count} lines "))
@@ -234,7 +247,17 @@ pub fn highlight_json(
             }
         ];
 
-        elements.push(indented_row.into());
+        let row_container = container(indented_row);
+        let styled_row = if is_match {
+            row_container.style(move |_: &Theme| container::Style {
+                background: Some(Background::Color(search_highlight_color)),
+                ..Default::default()
+            })
+        } else {
+            row_container.style(container::transparent)
+        };
+
+        elements.push(styled_row.into());
 
         if is_collapsible && is_collapsed {
             skip_depth = Some(current_indent);

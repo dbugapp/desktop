@@ -33,3 +33,6 @@ Thumbs.db
 *.dll
 *.dylib
 *.so
+
+# environmetn stuff for signing
+.env

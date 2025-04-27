@@ -119,7 +119,7 @@ pub fn payload_list<'a>(
                                     .height(18)
                                     .padding(1)
                                     .on_press(Message::DeletePayload(id.clone())),
-                                container(expand_svg)
+                                button(expand_svg)
                                     .width(18)
                                     .height(18)
                                     .padding(0)
@@ -144,7 +144,7 @@ pub fn payload_list<'a>(
         right: 5.0,
         left: 5.0,
         top: 1.0,
-        bottom: 0.0,
+        bottom: 5.0,
     });
 
     scrollable(container(storage_rows).padding(iced_core::Padding {

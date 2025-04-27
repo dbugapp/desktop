@@ -220,6 +220,10 @@ impl App {
         let button_size = 25;
         let payload_count = self.payload_list_cache.len();
 
+        // Calculate max height based on window size BEFORE the macro call
+        let window_size = self.settings.get_window_size();
+        let max_payload_height = window_size.height - 100.0;
+
         let content = container(
             column![
                 row![
@@ -247,11 +251,13 @@ impl App {
                 .spacing(10)
                 .align_y(iced::alignment::Vertical::Center)
                 .height(Length::Shrink),
+
                 components::payload_list(
                     &self.payload_list_cache,
                     self.expanded_payload_id.as_ref(),
                     &self.theme(),
                     &self.collapsed_json_lines,
+                    max_payload_height, // Pass calculated max height
                 ),
                 row![horizontal_space()]
                     .align_y(Bottom)

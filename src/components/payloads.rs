@@ -27,6 +27,7 @@ pub fn payload_list<'a>(
     expanded_id: Option<&String>,
     theme: &Theme,
     collapsed_json_lines: &HashSet<usize>,
+    max_payload_height: f32,
 ) -> Element<'a, Message> {
     let storage_rows = column(
         payloads
@@ -68,7 +69,7 @@ pub fn payload_list<'a>(
                                     ))
                                     .width(Fill)
                             )
-                            .max_height(300.0),
+                            .max_height(max_payload_height),
                             container(
                                 row![
                                     container(text(timestamp).size(10.0))

@@ -1,30 +1,10 @@
 use crate::app::Message;
 use iced::widget::{column, row, text, button, svg};
-use iced::{Color, Element, Theme};
+use iced::{Element, Theme, Center};
 use std::collections::{HashMap, HashSet};
 use crate::components::styles;
-
-fn color_for_token(token: &str, is_key: bool, in_string: bool, theme: &Theme) -> Color {
-    let palette = theme.extended_palette();
-    if in_string {
-        if is_key {
-            palette.secondary.base.text
-        } else {
-            palette.primary.strong.color
-        }
-    } else {
-        match token {
-            "{" | "}" => palette.background.weak.color,
-            "[" | "]" => palette.background.weak.color,
-            ":" => palette.secondary.base.color,
-            "," => palette.background.strong.color,
-            _ if token.trim().parse::<f64>().is_ok() => {
-                palette.success.weak.color
-            }
-            _ => palette.primary.weak.color,
-        }
-    }
-}
+use iced::widget::container;
+use iced::Background;
 
 /// Calculates the number of lines hidden within each collapsible block.
 /// Returns a map where the key is the starting line index of a block
@@ -68,9 +48,21 @@ pub fn highlight_json(
     json: &str,
     theme: &Theme,
     collapsed_lines: &HashSet<usize>,
+    search_query: &str,
 ) -> Element<'static, Message> {
     let lines = json.lines().map(|line| line.to_owned()).collect::<Vec<_>>();
     let collapse_counts = calculate_collapse_counts(&lines);
+    let palette = theme.extended_palette();
+    let line_number_color = palette.background.strong.color;
+    let key_color = palette.secondary.base.text;
+    let string_value_color = palette.primary.strong.color;
+    let bracket_color = palette.background.weak.color;
+    let colon_color = palette.secondary.base.color;
+    let number_color = palette.success.weak.color;
+    let other_value_color = palette.primary.weak.color;
+    let comma_color = palette.background.strong.color;
+    let search_highlight_bg = palette.background.weak.color;
+    let search_match_text_color = palette.success.strong.color;
 
     let mut elements = Vec::new();
     let mut indent_level: usize = 0;
@@ -98,6 +90,8 @@ pub fn highlight_json(
         if trimmed_line.starts_with('}') || trimmed_line.starts_with(']') {
             indent_level = indent_level.saturating_sub(1);
         }
+
+        let is_match = !search_query.is_empty() && line.to_lowercase().contains(&search_query.to_lowercase());
 
         let is_collapsible = (trimmed_line.ends_with('{') || trimmed_line.ends_with('[')) && idx != 0;
         let is_collapsed = collapsed_lines.contains(&idx);
@@ -173,13 +167,77 @@ pub fn highlight_json(
         let row_element = row(
             tokens
                 .into_iter()
-                .map(|(token, is_key, in_string)| {
-                    let color = color_for_token(&token, is_key, in_string, theme);
-                    text(token)
-                        .style(move |_| iced::widget::text::Style { color: Some(color) })
-                        .into()
+                .flat_map(|(token, is_key, in_string)| { // Use flat_map to handle multiple elements per token
+                    // Determine original syntax color
+                    let original_color = if in_string {
+                        if is_key {
+                            key_color
+                        } else {
+                            string_value_color
+                        }
+                    } else {
+                        match token.as_str() {
+                            "{" | "}" => bracket_color,
+                            "[" | "]" => bracket_color,
+                            ":" => colon_color,
+                            "," => comma_color,
+                            _ if token.trim().parse::<f64>().is_ok() => {
+                                number_color
+                            }
+                            _ => other_value_color,
+                        }
+                    };
+
+                    let mut token_elements = Vec::new();
+
+                    // Function to create a text element, escaping newlines
+                    let create_text_element = |content: String, color: iced::Color| -> Element<'static, Message> {
+                        text(content.replace('\n', "\\n")) // Replace \n with \\n before creating text widget
+                            .style(move |_| iced::widget::text::Style { color: Some(color) })
+                            .into()
+                    };
+
+                    // Check for search match (case-insensitive) and handle multiple matches
+                    if !search_query.is_empty() {
+                        let mut current_idx = 0;
+                        let token_lowercase = token.to_lowercase();
+                        let query_lowercase = search_query.to_lowercase();
+
+                        // Use match_indices for case-insensitive search simulation
+                        for (match_start_idx, matched_part_lowercase) in token_lowercase.match_indices(&query_lowercase) {
+                            let match_end_idx = match_start_idx + matched_part_lowercase.len();
+
+                            // Add non-matching part before the current match
+                            if match_start_idx > current_idx {
+                                let non_matching_part = token[current_idx..match_start_idx].to_string();
+                                token_elements.push(create_text_element(non_matching_part, original_color));
+                            }
+
+                            // Add the matching part
+                            let matching_part = token[match_start_idx..match_end_idx].to_string();
+                            token_elements.push(create_text_element(matching_part, search_match_text_color));
+
+                            current_idx = match_end_idx;
+                        }
+
+                        // Add any remaining non-matching part after the last match
+                        if current_idx < token.len() {
+                            let remaining_part = token[current_idx..].to_string();
+                            token_elements.push(create_text_element(remaining_part, original_color));
+                        }
+
+                        // If no matches were found at all in this token
+                        if token_elements.is_empty() {
+                             token_elements.push(create_text_element(token.to_string(), original_color));
+                        }
+                    } else {
+                        // Search query is empty, render the whole token normally
+                        token_elements.push(create_text_element(token.to_string(), original_color));
+                    }
+
+                    token_elements // Return Vec<Element> for flat_map
                 })
-                .collect::<Vec<Element<'_, Message>>>(),
+                .collect::<Vec<Element<'_, Message>>>(), // Collect the flattened elements
         );
 
         let collapse_button_icon = if is_collapsible {
@@ -209,17 +267,20 @@ pub fn highlight_json(
         let indented_row = row![
             collapse_element,
             text(format!("{:>3} ", idx + 1))
-                .size(12)
-                .style(move |theme: &Theme| iced::widget::text::Style {
-                    color: Some(theme.extended_palette().background.strong.color),
+                .style(move |_theme: &Theme| iced::widget::text::Style {
+                    color: Some(line_number_color),
                 })
+            .size(11)
                 .width(30),
             text(" ".repeat(current_indent * indent_size)),
             if is_collapsible && is_collapsed {
                 let count = collapse_counts.get(&idx).copied().unwrap_or(0);
                 let closing_char = if trimmed_line.ends_with('{') { "}" } else { "]" };
-                let token_color = color_for_token(closing_char, false, false, theme);
-                let count_color = theme.extended_palette().background.strong.color;
+                let token_color = match closing_char {
+                    "}" | "]" => bracket_color,
+                     _ => other_value_color,
+                };
+                let count_color = line_number_color;
 
                 let count_indicator = row![
                     text(format!(" {count} lines "))
@@ -232,9 +293,19 @@ pub fn highlight_json(
             } else {
                 row_element
             }
-        ];
+        ].align_y(Center);
 
-        elements.push(indented_row.into());
+        let row_container = container(indented_row);
+        let styled_row = if is_match {
+            row_container.style(move |_: &Theme| container::Style {
+                background: Some(Background::Color(search_highlight_bg)),
+                ..Default::default()
+            })
+        } else {
+            row_container.style(container::transparent)
+        };
+
+        elements.push(styled_row.into());
 
         if is_collapsible && is_collapsed {
             skip_depth = Some(current_indent);

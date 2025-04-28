@@ -95,6 +95,8 @@ impl App {
                          // self.update_highlight_cache(&old_id);
                     }
                     self.expanded_payload_id = Some(id.clone());
+                    self.search_query.clear(); // Clear search on payload change
+                    self.collapsed_json_lines.clear(); // Also clear collapsed sections
                     // self.update_highlight_cache(&id);
                 }
                 Task::none()
@@ -120,6 +122,7 @@ impl App {
                     self.payload_list_cache.clear();
                     self.expanded_payload_id = None;
                     self.collapsed_json_lines.clear();
+                    self.search_query.clear(); // Clear search when all payloads are cleared
                 }
                 Task::none()
             }
@@ -135,7 +138,9 @@ impl App {
                 if deleted {
                     self.payload_list_cache.retain(|(item_id, _)| item_id != &id);
                     if self.expanded_payload_id.as_ref() == Some(&id) {
+                        // If the currently viewed payload was deleted, clear search
                         self.expanded_payload_id = None;
+                        self.search_query.clear(); 
                     }
                     self.collapsed_json_lines.clear();
                 }
@@ -186,6 +191,10 @@ impl App {
                 }
                 iced::exit()
             }
+            Message::SearchQueryChanged(query) => {
+                self.search_query = query;
+                Task::none()
+            }
         }
     }
 
@@ -220,6 +229,10 @@ impl App {
         let button_size = 25;
         let payload_count = self.payload_list_cache.len();
 
+        // Calculate max height based on window size BEFORE the macro call
+        let window_size = self.settings.get_window_size();
+        let max_payload_height = window_size.height - 100.0;
+
         let content = container(
             column![
                 row![
@@ -247,11 +260,14 @@ impl App {
                 .spacing(10)
                 .align_y(iced::alignment::Vertical::Center)
                 .height(Length::Shrink),
+
                 components::payload_list(
                     &self.payload_list_cache,
                     self.expanded_payload_id.as_ref(),
                     &self.theme(),
                     &self.collapsed_json_lines,
+                    max_payload_height, // Pass calculated max height
+                    &self.search_query, // Pass search query
                 ),
                 row![horizontal_space()]
                     .align_y(Bottom)

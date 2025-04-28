@@ -190,52 +190,51 @@ pub fn highlight_json(
 
                     let mut token_elements = Vec::new();
 
-                    // Check for search match (case-insensitive)
+                    // Function to create a text element, escaping newlines
+                    let create_text_element = |content: String, color: iced::Color| -> Element<'static, Message> {
+                        text(content.replace('\n', "\\n")) // Replace \n with \\n before creating text widget
+                            .style(move |_| iced::widget::text::Style { color: Some(color) })
+                            .into()
+                    };
+
+                    // Check for search match (case-insensitive) and handle multiple matches
                     if !search_query.is_empty() {
-                        if let Some(match_start_lowercase) = token.to_lowercase().find(&search_query.to_lowercase()) {
-                            let match_end_lowercase = match_start_lowercase + search_query.len();
+                        let mut current_idx = 0;
+                        let token_lowercase = token.to_lowercase();
+                        let query_lowercase = search_query.to_lowercase();
 
-                            // Extract parts based on original token casing and convert to owned Strings
-                            let before = token[..match_start_lowercase].to_string();
-                            let matched = token[match_start_lowercase..match_end_lowercase].to_string();
-                            let after = token[match_end_lowercase..].to_string();
+                        // Use match_indices for case-insensitive search simulation
+                        for (match_start_idx, matched_part_lowercase) in token_lowercase.match_indices(&query_lowercase) {
+                            let match_end_idx = match_start_idx + matched_part_lowercase.len();
 
-                            if !before.is_empty() {
-                                token_elements.push(
-                                    text(before) // Pass owned String
-                                        .style(move |_| iced::widget::text::Style { color: Some(original_color) })
-                                        .into()
-                                );
+                            // Add non-matching part before the current match
+                            if match_start_idx > current_idx {
+                                let non_matching_part = token[current_idx..match_start_idx].to_string();
+                                token_elements.push(create_text_element(non_matching_part, original_color));
                             }
-                            token_elements.push(
-                                text(matched) // Pass owned String
-                                    // Apply search text color to the matched part
-                                    .style(move |_| iced::widget::text::Style { color: Some(search_match_text_color) })
-                                    .into()
-                            );
-                            if !after.is_empty() {
-                                token_elements.push(
-                                    text(after) // Pass owned String
-                                        .style(move |_| iced::widget::text::Style { color: Some(original_color) })
-                                        .into()
-                                );
-                            }
-                        } else {
-                            // No match in this token, pass owned String
-                            token_elements.push(
-                                text(token.to_string()) // Pass owned String
-                                    .style(move |_| iced::widget::text::Style { color: Some(original_color) })
-                                    .into()
-                            );
+
+                            // Add the matching part
+                            let matching_part = token[match_start_idx..match_end_idx].to_string();
+                            token_elements.push(create_text_element(matching_part, search_match_text_color));
+
+                            current_idx = match_end_idx;
+                        }
+
+                        // Add any remaining non-matching part after the last match
+                        if current_idx < token.len() {
+                            let remaining_part = token[current_idx..].to_string();
+                            token_elements.push(create_text_element(remaining_part, original_color));
+                        }
+
+                        // If no matches were found at all in this token
+                        if token_elements.is_empty() {
+                             token_elements.push(create_text_element(token.to_string(), original_color));
                         }
                     } else {
-                        // Search query is empty, pass owned String
-                        token_elements.push(
-                            text(token.to_string()) // Pass owned String
-                                .style(move |_| iced::widget::text::Style { color: Some(original_color) })
-                                .into()
-                        );
+                        // Search query is empty, render the whole token normally
+                        token_elements.push(create_text_element(token.to_string(), original_color));
                     }
+
                     token_elements // Return Vec<Element> for flat_map
                 })
                 .collect::<Vec<Element<'_, Message>>>(), // Collect the flattened elements

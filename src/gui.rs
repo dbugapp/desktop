@@ -13,12 +13,14 @@ use crate::settings::Settings;
 use iced::widget::{self, button, column, container, horizontal_space, row, svg, text};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
+const APP_TITLE: &str = concat!("dbug desktop v", env!("CARGO_PKG_VERSION"));
+
 /// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
     let settings = Settings::load();
 
     iced::application(App::default, App::update, App::view)
-        .title("dbug desktop")
+        .title(APP_TITLE)
         .subscription(App::subscription)
         .font(include_bytes!("../assets/fonts/firacode.ttf").as_slice())
         .default_font(Font::MONOSPACE)

@@ -35,4 +35,4 @@ Thumbs.db
 *.so
 
 # environmetn stuff for signing
-.env
+.env*

@@ -35,11 +35,12 @@ sign_macos() {
     return 0
   fi
 
-  if [[ $1 == *.zip ]]; then
+  if [[ $1 == *.dmg ]]; then
     echo "Running notarytool submit for $1"
     echo "Apple ID: ${APPLE_ID?}"
     echo "Team ID: ${APPLE_DEVELOPER_ID?}"
     xcrun notarytool submit "$1" --apple-id "${APPLE_ID?}" --team-id "${APPLE_DEVELOPER_ID?}" --password "${APPLE_ID_PASSWORD?}"
+    xcrun stapler staple "$1"
   else
     echo "Running codesign for $1"
     echo "Using Developer ID: ${APPLE_DEVELOPER_ID?}"

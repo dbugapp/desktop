@@ -183,11 +183,11 @@ impl App {
                     Task::none()
                 }
                 Event::Keyboard(keyboard::Event::KeyPressed {
-                    key: key,
+                    key,
                     modifiers,
                     ..
                 }) if modifiers.command() && key == keyboard::Key::Character(",".into()) => {
-                    Task::perform(async {}, |_| Message::OpenSettings)
+                    Task::perform(async {}, |()| Message::OpenSettings)
                 }
                 _ => Task::none(),
             },

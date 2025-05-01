@@ -116,8 +116,8 @@ impl App {
                     if let Some(_old_id) = self.expanded_payload_id.take() {
                     }
                     self.expanded_payload_id = Some(id.clone());
-                    self.search_query.clear(); // Clear search on payload change
-                    self.collapsed_json_lines.clear(); // Also clear collapsed sections
+                    self.search_query.clear();
+                    self.collapsed_json_lines.clear();
                 }
                 Task::none()
             }
@@ -153,7 +153,6 @@ impl App {
                 if deleted {
                     self.payload_list_cache.retain(|(item_id, _)| item_id != &id);
                     if self.expanded_payload_id.as_ref() == Some(&id) {
-                        // If the currently viewed payload was deleted, clear search
                         self.expanded_payload_id = None;
                         self.search_query.clear(); 
                     }
@@ -212,11 +211,7 @@ impl App {
                 if let Some(action) = self.hotkey_actions.get(&id) {
                     match action {
                         HotkeyAction::ShowWindow => {
-                            if let Some(window_id) = self.main_window_id.clone() {
-                                window::gain_focus(window_id)
-                            } else {
-                                Task::none()
-                            }
+                            window::gain_focus(self.main_window_id.unwrap())
                         }
                         HotkeyAction::ClearPayloads => {
                             Task::perform(async {}, |_| Message::ClearPayloads)

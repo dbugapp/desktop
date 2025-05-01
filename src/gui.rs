@@ -16,6 +16,7 @@ use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 use global_hotkey::GlobalHotKeyEvent;
 use iced::futures::SinkExt;
 use iced::stream;
+use crate::app::HotkeyAction;
 
 const APP_TITLE: &str = concat!("dbug desktop v", env!("CARGO_PKG_VERSION"));
 
@@ -37,13 +38,13 @@ pub fn gui() -> iced::Result {
 }
 
 fn hotkey_listener() -> impl futures::Stream<Item = Message> {
-    stream::channel(1, |mut sender: futures::channel::mpsc::Sender<Message>| async move {
+    stream::channel(32, |mut sender: futures::channel::mpsc::Sender<Message>| async move {
         let receiver = GlobalHotKeyEvent::receiver();
         loop {
             if let Ok(event) = receiver.try_recv() {
                 if sender.send(Message::HotkeyActivated(event.id)).await.is_err() {
                     break;
-                };
+                }
             }
             async_std::task::sleep(std::time::Duration::from_millis(50)).await;
         }
@@ -207,10 +208,22 @@ impl App {
                 self.search_query = query;
                 Task::none()
             }
-            Message::HotkeyActivated(_id) => {
-                if let Some(window_id) = self.main_window_id.clone() {
-                    window::gain_focus(window_id)
+            Message::HotkeyActivated(id) => {
+                if let Some(action) = self.hotkey_actions.get(&id) {
+                    match action {
+                        HotkeyAction::ShowWindow => {
+                            if let Some(window_id) = self.main_window_id.clone() {
+                                window::gain_focus(window_id)
+                            } else {
+                                Task::none()
+                            }
+                        }
+                        HotkeyAction::ClearPayloads => {
+                            Task::perform(async {}, |_| Message::ClearPayloads)
+                        }
+                    }
                 } else {
+                    eprintln!("WARN: HotkeyActivated received for unknown ID: {}", id);
                     Task::none()
                 }
             }

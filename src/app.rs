@@ -1,18 +1,25 @@
 use crate::server::ServerMessage;
 use crate::settings::Settings;
 use crate::storage::Storage;
+use iced::window;
+use iced::Task;
 use iced::event::Event;
 use serde_json::Value;
 use std::collections::HashSet;
+use std::collections::HashMap;
 
 use global_hotkey::{
     hotkey::{Code, HotKey, Modifiers},
     GlobalHotKeyManager,
 };
 
-use iced::window;
 
-use iced::Task;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) enum HotkeyAction {
+    ShowWindow,
+    ClearPayloads,
+}
 
 pub(crate) struct App {
     pub(crate) show_modal: bool,
@@ -24,6 +31,7 @@ pub(crate) struct App {
     pub(crate) search_query: String,
     _hotkey_manager: GlobalHotKeyManager,
     pub(crate) main_window_id: Option<window::Id>,
+    pub(crate) hotkey_actions: HashMap<u32, HotkeyAction>,
 }
 
 impl App {
@@ -33,8 +41,16 @@ impl App {
         let newest_payload_id = payload_list_cache.first().map(|(id, _)| id.clone());
 
         let manager = GlobalHotKeyManager::new().expect("Failed to create GlobalHotKeyManager");
-        let hotkey = HotKey::new(Some(Modifiers::SHIFT | Modifiers::SUPER), Code::KeyL);
-        manager.register(hotkey).unwrap();
+        let mut hotkey_actions = HashMap::new();
+
+        let hotkey_visible = HotKey::new(Some(Modifiers::SHIFT | Modifiers::SUPER), Code::KeyL);
+        let hotkey_clear_payloads = HotKey::new(Some(Modifiers::SHIFT | Modifiers::SUPER), Code::KeyK);
+
+        hotkey_actions.insert(hotkey_visible.id, HotkeyAction::ShowWindow);
+        hotkey_actions.insert(hotkey_clear_payloads.id, HotkeyAction::ClearPayloads);
+
+        manager.register(hotkey_visible).expect("Failed to register ShowWindow hotkey");
+        manager.register(hotkey_clear_payloads).expect("Failed to register ClearPayloads hotkey");
 
         let app = Self {
             show_modal: false,
@@ -46,6 +62,7 @@ impl App {
             search_query: String::new(),
             _hotkey_manager: manager,
             main_window_id: None,
+            hotkey_actions,
         };
 
         (app, Task::none())
@@ -69,6 +86,7 @@ pub(crate) enum Message {
     WindowResized(iced::Size),
     WindowClosed,
     SearchQueryChanged(String),
+    // Re-introduce HotkeyActivated
     HotkeyActivated(u32),
     CaptureWindowId(window::Id),
 } 

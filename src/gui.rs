@@ -58,6 +58,9 @@ impl App {
             Subscription::run(hotkey_listener),
             iced::event::listen_with(|event, _status, window_id| {
                 match event {
+                    // Forward Keyboard events
+                    Event::Keyboard(_) => Some(Message::Event(event)),
+                    // Keep existing Window event handlers
                     Event::Window(window::Event::Closed) => Some(Message::WindowClosed),
                     Event::Window(window::Event::Moved(position)) => Some(Message::WindowMoved(position)),
                     Event::Window(window::Event::Resized(size)) => Some(Message::WindowResized(size)),
@@ -179,6 +182,13 @@ impl App {
                     self.hide_modal();
                     Task::none()
                 }
+                Event::Keyboard(keyboard::Event::KeyPressed {
+                    key: key,
+                    modifiers,
+                    ..
+                }) if modifiers.command() && key == keyboard::Key::Character(",".into()) => {
+                    Task::perform(async {}, |_| Message::OpenSettings)
+                }
                 _ => Task::none(),
             },
             Message::WindowMoved(position) => {
@@ -226,6 +236,10 @@ impl App {
                 if self.main_window_id.is_none() {
                     self.main_window_id = Some(id);
                 }
+                Task::none()
+            }
+            Message::OpenSettings => {
+                self.show_modal = true;
                 Task::none()
             }
         }

@@ -89,4 +89,5 @@ pub(crate) enum Message {
     // Re-introduce HotkeyActivated
     HotkeyActivated(u32),
     CaptureWindowId(window::Id),
+    OpenSettings,
 } 

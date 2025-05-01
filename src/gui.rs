@@ -13,6 +13,10 @@ use crate::settings::Settings;
 use iced::widget::{self, button, column, container, horizontal_space, row, svg, text};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
+use global_hotkey::GlobalHotKeyEvent;
+use iced::futures::{SinkExt, StreamExt};
+use iced::stream;
+
 const APP_TITLE: &str = concat!("dbug desktop v", env!("CARGO_PKG_VERSION"));
 
 /// Initializes and runs the GUI application
@@ -33,17 +37,38 @@ pub fn gui() -> iced::Result {
         .run()
 }
 
+// Add this helper function to listen for hotkey events
+fn hotkey_listener() -> impl iced::futures::Stream<Item = Message> {
+    stream::channel(1, |mut sender: iced::futures::channel::mpsc::Sender<Message>| async move {
+        let receiver = GlobalHotKeyEvent::receiver();
+        loop {
+            if let Ok(event) = receiver.try_recv() {
+                // Send the hotkey ID back to the update loop via the channel sender
+                if sender.send(Message::HotkeyActivated(event.id)).await.is_err() {
+                    eprintln!("Hotkey listener channel closed, stopping.");
+                    break;
+                };
+            }
+            async_std::task::sleep(std::time::Duration::from_millis(50)).await;
+        }
+    })
+}
+
 impl App {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             Subscription::run(server::listen).map(Server),
-            iced::event::listen_with(|event, _status, _window_id| match event {
-                Event::Window(window::Event::Closed) => Some(Message::WindowClosed),
-                Event::Window(window::Event::Moved(position)) => {
-                    Some(Message::WindowMoved(position))
+            Subscription::run(hotkey_listener),
+            // Assume the 3rd arg is now `window::Id`, not `Option<window::Id>` (master branch change?)
+            iced::event::listen_with(|event, _status, window_id| {
+                match event {
+                    Event::Window(window::Event::Closed) => Some(Message::WindowClosed),
+                    Event::Window(window::Event::Moved(position)) => Some(Message::WindowMoved(position)),
+                    Event::Window(window::Event::Resized(size)) => Some(Message::WindowResized(size)),
+                    // If any window event occurs, assume we have the ID and forward it
+                    Event::Window(_) => Some(Message::CaptureWindowId(window_id)),
+                    _ => None,
                 }
-                Event::Window(window::Event::Resized(size)) => Some(Message::WindowResized(size)),
-                _ => None,
             }),
         ])
     }
@@ -71,6 +96,7 @@ impl App {
                     }
                 }
             }
+   
             Message::ShowModal => {
                 self.show_modal = true;
                 Task::none()
@@ -195,6 +221,26 @@ impl App {
             }
             Message::SearchQueryChanged(query) => {
                 self.search_query = query;
+                Task::none()
+            }
+            // Handle the HotkeyActivated message
+            Message::HotkeyActivated(_id) => { // ID is unused for now
+                println!("DEBUG: Show window hotkey activated!");
+                // Use the captured main window ID (if available) to gain focus
+                if let Some(id) = self.main_window_id.clone() {
+                    window::gain_focus(id)
+                } else {
+                    eprintln!("WARN: Hotkey activated but main window ID not captured yet.");
+                    Task::none()
+                }
+            }
+            // Handle the CaptureWindowId message
+            Message::CaptureWindowId(id) => {
+                // Store the ID only if we haven't already
+                if self.main_window_id.is_none() {
+                    println!("DEBUG: Captured main window ID: {:?}", id);
+                    self.main_window_id = Some(id);
+                }
                 Task::none()
             }
         }

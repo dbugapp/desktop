@@ -5,6 +5,18 @@ use iced::event::Event;
 use serde_json::Value;
 use std::collections::HashSet;
 
+// Add imports for global_hotkey
+use global_hotkey::{
+    hotkey::{Code, HotKey, Modifiers},
+    GlobalHotKeyManager,
+};
+
+// Add import for window::Id
+use iced::window;
+
+// Add Task import
+use iced::Task;
+
 /// Application state and logic
 pub(crate) struct App {
     pub(crate) show_modal: bool,
@@ -14,15 +26,31 @@ pub(crate) struct App {
     pub(crate) collapsed_json_lines: HashSet<usize>,
     pub(crate) payload_list_cache: Vec<(String, Value)>,
     pub(crate) search_query: String,
+    _hotkey_manager: GlobalHotKeyManager,
+    pub(crate) main_window_id: Option<window::Id>,
 }
 
-impl Default for App {
-    fn default() -> Self {
+impl App {
+    pub(crate) fn default() -> (Self, Task<Message>) {
         let storage = Storage::new().expect("Failed to initialize storage");
         let payload_list_cache = storage.get_all();
         let newest_payload_id = payload_list_cache.first().map(|(id, _)| id.clone());
 
-        Self {
+        // Initialize and register hotkey
+        let manager = GlobalHotKeyManager::new().expect("Failed to create GlobalHotKeyManager");
+        let hotkey = HotKey::new(Some(Modifiers::SHIFT | Modifiers::SUPER), Code::KeyL);
+        // Just register, don't need to store ID for now
+        if let Err(e) = manager.register(hotkey) {
+            eprintln!("ERROR: Failed to register hotkey: {}", e);
+        }
+
+        /*
+        if let Ok(event) = GlobalHotKeyEvent::receiver().try_recv() {
+            println!("{:?}", event);
+        }
+        */
+
+        let app = Self {
             show_modal: false,
             settings: Settings::load(),
             storage,
@@ -30,7 +58,12 @@ impl Default for App {
             collapsed_json_lines: HashSet::new(),
             payload_list_cache,
             search_query: String::new(),
-        }
+            _hotkey_manager: manager,
+            main_window_id: None,
+        };
+
+        // Return the App instance and an initial command (Task::none() here)
+        (app, Task::none())
     }
 }
 
@@ -51,4 +84,6 @@ pub(crate) enum Message {
     WindowResized(iced::Size),
     WindowClosed,
     SearchQueryChanged(String),
+    HotkeyActivated(u32),
+    CaptureWindowId(window::Id),
 } 

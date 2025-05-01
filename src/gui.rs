@@ -13,9 +13,13 @@ use crate::settings::Settings;
 use iced::widget::{self, button, column, container, horizontal_space, row, svg, text};
 use iced::{Bottom, Element, Fill, Font, Subscription, Task};
 
+use global_hotkey::GlobalHotKeyEvent;
+use iced::futures::SinkExt;
+use iced::stream;
+use crate::app::HotkeyAction;
+
 const APP_TITLE: &str = concat!("dbug desktop v", env!("CARGO_PKG_VERSION"));
 
-/// Initializes and runs the GUI application
 pub fn gui() -> iced::Result {
     let settings = Settings::load();
 
@@ -33,17 +37,36 @@ pub fn gui() -> iced::Result {
         .run()
 }
 
+fn hotkey_listener() -> impl futures::Stream<Item = Message> {
+    stream::channel(32, |mut sender: futures::channel::mpsc::Sender<Message>| async move {
+        let receiver = GlobalHotKeyEvent::receiver();
+        loop {
+            if let Ok(event) = receiver.try_recv() {
+                if sender.send(Message::HotkeyActivated(event.id)).await.is_err() {
+                    break;
+                }
+            }
+            async_std::task::sleep(std::time::Duration::from_millis(50)).await;
+        }
+    })
+}
+
 impl App {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch(vec![
             Subscription::run(server::listen).map(Server),
-            iced::event::listen_with(|event, _status, _window_id| match event {
-                Event::Window(window::Event::Closed) => Some(Message::WindowClosed),
-                Event::Window(window::Event::Moved(position)) => {
-                    Some(Message::WindowMoved(position))
+            Subscription::run(hotkey_listener),
+            iced::event::listen_with(|event, _status, window_id| {
+                match event {
+                    // Forward Keyboard events
+                    Event::Keyboard(_) => Some(Message::Event(event)),
+                    // Keep existing Window event handlers
+                    Event::Window(window::Event::Closed) => Some(Message::WindowClosed),
+                    Event::Window(window::Event::Moved(position)) => Some(Message::WindowMoved(position)),
+                    Event::Window(window::Event::Resized(size)) => Some(Message::WindowResized(size)),
+                    Event::Window(_) => Some(Message::CaptureWindowId(window_id)),
+                    _ => None,
                 }
-                Event::Window(window::Event::Resized(size)) => Some(Message::WindowResized(size)),
-                _ => None,
             }),
         ])
     }
@@ -71,6 +94,7 @@ impl App {
                     }
                 }
             }
+   
             Message::ShowModal => {
                 self.show_modal = true;
                 Task::none()
@@ -93,13 +117,10 @@ impl App {
                     self.expanded_payload_id = None;
                 } else {
                     if let Some(_old_id) = self.expanded_payload_id.take() {
-                         // No cache to update
-                         // self.update_highlight_cache(&old_id);
                     }
                     self.expanded_payload_id = Some(id.clone());
-                    self.search_query.clear(); // Clear search on payload change
-                    self.collapsed_json_lines.clear(); // Also clear collapsed sections
-                    // self.update_highlight_cache(&id);
+                    self.search_query.clear();
+                    self.collapsed_json_lines.clear();
                 }
                 Task::none()
             }
@@ -110,8 +131,6 @@ impl App {
                     } else {
                         self.collapsed_json_lines.insert(line_index);
                     }
-                    // No cache to update
-                    // self.update_highlight_cache(&payload_id);
                  } else {
                      eprintln!("WARN: ToggleJsonSection called with no expanded payload");
                  }
@@ -129,18 +148,14 @@ impl App {
                 Task::none()
             }
             Message::DeletePayload(id) => {
-                let deleted = match self.storage.delete(&id) {
-                    Ok(d) => d,
-                    Err(e) => {
-                        eprintln!("Failed to delete payload: {e}");
-                        false
-                    }
-                };
+                let deleted = self.storage.delete(&id).unwrap_or_else(|e| {
+                    eprintln!("Failed to delete payload: {e}");
+                    false
+                });
 
                 if deleted {
                     self.payload_list_cache.retain(|(item_id, _)| item_id != &id);
                     if self.expanded_payload_id.as_ref() == Some(&id) {
-                        // If the currently viewed payload was deleted, clear search
                         self.expanded_payload_id = None;
                         self.search_query.clear(); 
                     }
@@ -167,6 +182,13 @@ impl App {
                     self.hide_modal();
                     Task::none()
                 }
+                Event::Keyboard(keyboard::Event::KeyPressed {
+                    key,
+                    modifiers,
+                    ..
+                }) if modifiers.command() && key == keyboard::Key::Character(",".into()) => {
+                    Task::perform(async {}, |()| Message::OpenSettings)
+                }
                 _ => Task::none(),
             },
             Message::WindowMoved(position) => {
@@ -186,15 +208,38 @@ impl App {
                 Task::none()
             }
             Message::WindowClosed => {
-                // Attempt a final save on close, but don't rely on it solely.
                 if let Err(e) = self.settings.save() {
-                    // Log quietly if needed, but main saves happen earlier.
                     eprintln!("Note: Final settings save on close failed: {e}");
                 }
                 iced::exit()
             }
             Message::SearchQueryChanged(query) => {
                 self.search_query = query;
+                Task::none()
+            }
+            Message::HotkeyActivated(id) => {
+                if let Some(action) = self.hotkey_actions.get(&id) {
+                    match action {
+                        HotkeyAction::ShowWindow => {
+                            window::gain_focus(self.main_window_id.unwrap())
+                        }
+                        HotkeyAction::ClearPayloads => {
+                            Task::perform(async {}, |()| Message::ClearPayloads)
+                        }
+                    }
+                } else {
+                    eprintln!("WARN: HotkeyActivated received for unknown ID: {id}");
+                    Task::none()
+                }
+            }
+            Message::CaptureWindowId(id) => {
+                if self.main_window_id.is_none() {
+                    self.main_window_id = Some(id);
+                }
+                Task::none()
+            }
+            Message::OpenSettings => {
+                self.show_modal = true;
                 Task::none()
             }
         }
@@ -268,8 +313,8 @@ impl App {
                     self.expanded_payload_id.as_ref(),
                     &self.theme(),
                     &self.collapsed_json_lines,
-                    max_payload_height, // Pass calculated max height
-                    &self.search_query, // Pass search query
+                    max_payload_height,
+                    &self.search_query,
                 ),
                 row![horizontal_space()]
                     .align_y(Bottom)
@@ -288,7 +333,6 @@ impl App {
         }
     }
 
-    /// Hides the modal dialog
     fn hide_modal(&mut self) {
         self.show_modal = false;
     }

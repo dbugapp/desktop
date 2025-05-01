@@ -28,6 +28,20 @@ pub(crate) fn container_code(theme: &Theme) -> container::Style {
         }
     }
 }
+
+pub(crate) fn container_modal(theme: &Theme) -> container::Style {
+    {
+        let palette = theme.extended_palette();
+        let bg_color = palette.background.base.color;
+        let border_color = palette.background.strong.color;
+
+        container::Style {
+            background: Some(bg_color.into()),
+            border: iced_core::border::rounded(5).color(border_color).width(1.0),
+            ..container::Style::default()
+        }
+    }
+}
 pub(crate) fn container_code_closed(theme: &Theme) -> container::Style {
     {
         let palette = theme.extended_palette();

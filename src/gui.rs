@@ -214,11 +214,11 @@ impl App {
                             window::gain_focus(self.main_window_id.unwrap())
                         }
                         HotkeyAction::ClearPayloads => {
-                            Task::perform(async {}, |_| Message::ClearPayloads)
+                            Task::perform(async {}, |()| Message::ClearPayloads)
                         }
                     }
                 } else {
-                    eprintln!("WARN: HotkeyActivated received for unknown ID: {}", id);
+                    eprintln!("WARN: HotkeyActivated received for unknown ID: {id}");
                     Task::none()
                 }
             }

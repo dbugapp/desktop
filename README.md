@@ -1,7 +1,7 @@
 # Dbug Desktop
 
 ![Rust](https://img.shields.io/badge/Rust-1.32%2B-blue?style=flat-square&logo=rust)
-![Iced](https://img.shields.io/badge/Iced-0.14-0-dev-blue?style=flat-square&logo=iced)
+![Iced](https://img.shields.io/badge/Iced-0.14-blue?style=flat-square&logo=iced)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 
 Dbug Desktop is a desktop application built with Rust, using the `iced` GUI library and `tokio` for asynchronous operations. It allows users to view and manage JSON data sent via HTTP POST requests.

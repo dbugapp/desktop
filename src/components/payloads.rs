@@ -64,15 +64,20 @@ pub fn payload_list<'a>(
                         stack![
                             container(
                                 scrollable(container(highlighted_json).padding(10))
-                                    .direction(scrollable::Direction::Vertical(
-                                        scrollable::Scrollbar::new().width(3).scroller_width(3),
-                                    ))
+                                    .direction(scrollable::Direction::Both {
+                                        vertical: scrollable::Scrollbar::new()
+                                            .width(3)
+                                            .scroller_width(3),
+                                        horizontal: scrollable::Scrollbar::new()
+                                            .width(3)
+                                            .scroller_width(3),
+                                    })
                                     .width(Fill)
                             ).padding(
                             iced_core::Padding {
                                     top: 3.0,
-                                    right: 2.0,
-                                    bottom: 3.0,
+                                    right: 0.0,
+                                    bottom: 0.0,
                                     ..Default::default()
                             })
                             .max_height(max_payload_height),

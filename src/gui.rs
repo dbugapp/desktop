@@ -275,7 +275,7 @@ impl App {
     }
 
     /// Renders the application view
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let logo_svg = svg(svg::Handle::from_memory(
             include_bytes!("../assets/icons/mdi--ladybug.svg").as_slice(),
         ))

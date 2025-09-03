@@ -132,7 +132,7 @@ impl Storage {
             }
             Err(e) => {
                 eprintln!("ERROR: Failed to serialize/write config to file {config_file:?}: {e}");
-                Err(io::Error::new(io::ErrorKind::Other, e))
+                Err(io::Error::other(e))
             }
         }
     }
@@ -181,7 +181,7 @@ impl Storage {
             }
             Err(poisoned) => {
                 eprintln!("ERROR: Storage mutex poisoned in add_json: {poisoned}");
-                return Err(io::Error::new(io::ErrorKind::Other, "Mutex poisoned"));
+                return Err(io::Error::other("Mutex poisoned"));
             }
         }
 
@@ -211,7 +211,7 @@ impl Storage {
                 Ok(guard) => guard,
                 Err(poisoned) => {
                     eprintln!("ERROR: Storage mutex poisoned in delete: {poisoned}");
-                    return Err(io::Error::new(io::ErrorKind::Other, "Mutex poisoned"));
+                    return Err(io::Error::other("Mutex poisoned"));
                 }
             };
             let (payloads, current_total_bytes) = &mut *data_guard;
@@ -255,7 +255,7 @@ impl Storage {
             }
             Err(poisoned) => {
                 eprintln!("ERROR: Storage mutex poisoned in delete_all: {poisoned}");
-                return Err(io::Error::new(io::ErrorKind::Other, "Mutex poisoned"));
+                return Err(io::Error::other("Mutex poisoned"));
             }
         }
         self.save_to_file()
@@ -273,7 +273,7 @@ impl Storage {
             }
             Err(poisoned) => {
                 eprintln!("ERROR: Storage mutex poisoned during save_to_file: {poisoned}");
-                return Err(io::Error::new(io::ErrorKind::Other, "Mutex poisoned"));
+                return Err(io::Error::other("Mutex poisoned"));
             }
         };
 
@@ -287,6 +287,6 @@ impl Storage {
 
         // Serialize the mapped data (without sizes)
         serde_json::to_writer_pretty(writer, &data_to_save)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+            .map_err(io::Error::other)
     }
 }

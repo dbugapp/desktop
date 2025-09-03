@@ -90,4 +90,7 @@ pub(crate) enum Message {
     HotkeyActivated(u32),
     CaptureWindowId(window::Id),
     OpenSettings,
-} 
+    ServerHostChanged(String),
+    ServerPortChanged(String),
+    ResetServerToDefaults,
+}

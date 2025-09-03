@@ -1,10 +1,11 @@
 use crate::app::Message;
-use iced::widget::{column, container, radio, scrollable, text, row, horizontal_space, Row};
+use crate::settings::Settings;
+use iced::widget::{column, container, radio, scrollable, text, row, horizontal_space, Row, text_input, button};
 use iced::{Element, Fill, Theme, Length};
 use crate::components::styles;
 
 /// Creates the settings modal content with theme selection
-pub fn settings_modal<'a>(current_theme: Theme) -> Element<'a, Message> {
+pub fn settings_modal<'a>(current_theme: Theme, settings: &Settings) -> Element<'a, Message> {
     // Find the current theme index in Theme::ALL
     let current_index = Theme::ALL
         .iter()
@@ -39,7 +40,7 @@ pub fn settings_modal<'a>(current_theme: Theme) -> Element<'a, Message> {
                 column![
                     shortcut_row("Shift+Cmd+L", "Toggle visibility from anywhere"),
                     shortcut_row("Shift+Cmd+K", "Clear payloads from anywhere"),
-                    shortcut_row("Cmd+,", "Open Settings"), // Added the Cmd+, shortcut
+                    shortcut_row("Cmd+,", "Open Settings"),
                 ].spacing(5).padding(iced_core::Padding { top: 5.0, bottom: 15.0, right: 15.0, ..Default::default() }),
 
                 // --- Theme Selection Section ---
@@ -88,8 +89,33 @@ pub fn settings_modal<'a>(current_theme: Theme) -> Element<'a, Message> {
                     left: 5.0,
                     right: 5.0,
                     top: 10.0,
-                    bottom: 5.0,
-                })
+                    bottom: 15.0,
+                }),
+
+                // --- Server Configuration Section ---
+                container(text("Server Configuration").size(16).style(header_style)).style(header_background_style).width(Fill).padding(5),
+                column![
+                    row![
+                        text("Host:").width(Length::Fixed(60.0)).size(12),
+                        text_input("127.0.0.1", settings.get_server_host())
+                            .on_input(Message::ServerHostChanged)
+                            .width(Length::Fixed(120.0))
+                            .size(12),
+                    ].spacing(10).padding(5),
+                    row![
+                        text("Port:").width(Length::Fixed(60.0)).size(12),
+                        text_input("53821", &settings.get_server_port().to_string())
+                            .on_input(Message::ServerPortChanged)
+                            .width(Length::Fixed(120.0))
+                            .size(12),
+                    ].spacing(10).padding(5),
+                    row![
+                        horizontal_space(),
+                        button(text("Set to Default").size(12))
+                            .on_press(Message::ResetServerToDefaults)
+                            .style(button::secondary),
+                    ].spacing(10).padding(5),
+                ].spacing(5).padding(iced_core::Padding { top: 5.0, bottom: 15.0, right: 15.0, ..Default::default() }),
             ]
             .padding(iced_core::Padding {
                 left: 0.0,

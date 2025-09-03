@@ -242,6 +242,30 @@ impl App {
                 self.show_modal = true;
                 Task::none()
             }
+            Message::ServerHostChanged(host) => {
+                self.settings.set_server_host(host);
+                if let Err(e) = self.settings.save() {
+                    eprintln!("Failed to save settings: {e}");
+                }
+                Task::none()
+            }
+            Message::ServerPortChanged(port_str) => {
+                if let Ok(port) = port_str.parse::<u16>() {
+                    self.settings.set_server_port(port);
+                    if let Err(e) = self.settings.save() {
+                        eprintln!("Failed to save settings: {e}");
+                    }
+                }
+                Task::none()
+            }
+            Message::ResetServerToDefaults => {
+                self.settings.set_server_host("127.0.0.1".to_string());
+                self.settings.set_server_port(53821);
+                if let Err(e) = self.settings.save() {
+                    eprintln!("Failed to save settings: {e}");
+                }
+                Task::none()
+            }
         }
     }
 
@@ -251,7 +275,7 @@ impl App {
     }
 
     /// Renders the application view
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let logo_svg = svg(svg::Handle::from_memory(
             include_bytes!("../assets/icons/mdi--ladybug.svg").as_slice(),
         ))
@@ -325,7 +349,7 @@ impl App {
 
         if self.show_modal {
             let current_theme = self.theme();
-            let settings_content = components::settings_modal(current_theme);
+            let settings_content = components::settings_modal(current_theme, &self.settings);
 
             components::modal(content, settings_content, Message::HideModal)
         } else {

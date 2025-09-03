@@ -49,7 +49,8 @@ pub struct Settings {
     theme_name: String,
     window_position: SerializablePoint,
     window_size: SerializableSize,
-    // ... any other settings
+    server_host: String,
+    server_port: u16,
 }
 
 impl Default for Settings {
@@ -61,6 +62,8 @@ impl Default for Settings {
                 width: 1280.0,
                 height: 800.0,
             },
+            server_host: "127.0.0.1".to_string(),
+            server_port: 53821,
         }
     }
 }
@@ -106,5 +109,21 @@ impl Settings {
 
     pub fn get_window_size(&self) -> Size {
         self.window_size.clone().into()
+    }
+
+    pub fn get_server_host(&self) -> &str {
+        &self.server_host
+    }
+
+    pub fn get_server_port(&self) -> u16 {
+        self.server_port
+    }
+
+    pub fn set_server_host(&mut self, host: String) {
+        self.server_host = host;
+    }
+
+    pub fn set_server_port(&mut self, port: u16) {
+        self.server_port = port;
     }
 }

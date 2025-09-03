@@ -266,6 +266,9 @@ impl App {
                 }
                 Task::none()
             }
+            Message::CopyJsonToClipboard(json_content) => {
+                iced::clipboard::write(json_content)
+            }
         }
     }
 

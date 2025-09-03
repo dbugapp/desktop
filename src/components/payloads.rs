@@ -60,6 +60,13 @@ pub fn payload_list<'a>(
                         .height(Fill)
                         .style(styles::svg_style_primary);
 
+                    let copy_svg = svg(svg::Handle::from_memory(
+                        include_bytes!("../../assets/icons/mdi--content-copy.svg").as_slice(),
+                    ))
+                        .width(Fill)
+                        .height(Fill)
+                        .style(styles::svg_style_secondary);
+
                     container(
                         stack![
                             container(
@@ -92,6 +99,12 @@ pub fn payload_list<'a>(
                                         .on_input(Message::SearchQueryChanged)
                                         .size(13)
                                         .padding(2),
+                                    button(copy_svg)
+                                        .style(button::secondary)
+                                        .width(18)
+                                        .height(18)
+                                        .padding(4)
+                                        .on_press(Message::CopyJsonToClipboard(pretty_json.clone())),
                                     button(delete_svg)
                                         .style(button::danger)
                                         .width(18)

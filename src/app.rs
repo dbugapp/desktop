@@ -93,4 +93,5 @@ pub(crate) enum Message {
     ServerHostChanged(String),
     ServerPortChanged(String),
     ResetServerToDefaults,
+    CopyJsonToClipboard(String),
 }

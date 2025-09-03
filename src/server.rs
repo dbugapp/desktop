@@ -45,9 +45,9 @@ pub(crate) enum _ServerInput {
 
          let routes = payload.with(cors);
 
-         println!("Server started at http://{}:{}", host, port);
+         println!("Server started at http://{host}:{port}");
 
-         let addr: std::net::SocketAddr = format!("{}:{}", host, port)
+         let addr: std::net::SocketAddr = format!("{host}:{port}")
              .parse()
              .unwrap_or_else(|_| ([127, 0, 0, 1], 53821).into());
 

@@ -1,5 +1,7 @@
 # Dbug Desktop
 
+![Dbug Desktop Example](dbug-desktop-ss.png)
+
 ![Rust](https://img.shields.io/badge/Rust-1.32%2B-blue?style=flat-square&logo=rust)
 ![Iced](https://img.shields.io/badge/Iced-0.14-blue?style=flat-square&logo=iced)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
